@@ -1,9 +1,14 @@
-/build/
+build/
+
+imgui.ini
 
 .DS_Store
 Thumbs.db
 
-.vscode/
+.vscode/*.code-workspace
+.vscode/settings.json
+.vscode/*.history
+
 .idea/
 *.suo
 *.user

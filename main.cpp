@@ -42,6 +42,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     );
 
     Globals::MainWindow = hwnd;
+    EnableBlur(hwnd);
 
     if (!CreateDeviceD3D(hwnd)) {
         CleanupDeviceD3D();
@@ -158,7 +159,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         }
     });
 
-    MultiSliderCallbackImGuiBind TestMacroBind;
+    MultiSliderCallbackImGuiBind TestMacroBind([](const int Value) {
+        std::cerr << std::to_string(Value) << std::endl;
+    });
 
     {
         Globals::IntSliderFlags["Flick Angle"] = 90;
@@ -226,9 +229,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 310,
                 0,
                 false,
-                GetTextElementsInfo(std::array{1, 1, 2})
+                GetTextElementsInfo(std::array{1, 1, 1, 2})
             )&& ImGui::Begin("Information", nullptr, WindowFlags)) {
                 ImGui::PushTextWrapPos();
+                ImGui::TextColored(ImVec4(1, 0.2, 0.2, 1), "INSERT KEY TO OPEN/CLOSE!");
                 ImGui::Text("Thanks to TASability for inspiration!");
                 ImGui::Text("Created by Anbubu (@anbubu on discord)");
                 ImGui::TextColored(ImVec4(1, 0.3, 0.3, 1), "Make sure this program is acceptable for use on whatever game you're playing");

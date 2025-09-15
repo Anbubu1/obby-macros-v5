@@ -33,28 +33,30 @@ struct DisplayMapInitializer {
 
 static DisplayMapInitializer _displayMapInit;
 
-bool SetRightSideButton(BlankImGuiBind* Bind) {
-    ImVec2 RegionSize = ImGui::GetContentRegionAvail();
-    float RegionWidth = RegionSize.x;
+bool SetRightMostButton(BlankImGuiBind* Bind, bool NoDummy) {
+    if (!NoDummy) {
+        const ImVec2 RegionSize = ImGui::GetContentRegionAvail();
+        const float RegionWidth = RegionSize.x;
 
-    ImVec2 LastElementSize = ImGui::GetItemRectSize();
-    float LastElementWidth = LastElementSize.x;
+        const ImVec2 LastElementSize = ImGui::GetItemRectSize();
+        const float LastElementWidth = LastElementSize.x;
 
-    ImGuiStyle Style = ImGui::GetStyle();
-    float LeftTextMargin = Style.FramePadding.x;
-    float PaddingWidth = Style.WindowPadding.x;
-    float SpacingWidth = Style.ItemSpacing.x;
+        const ImGuiStyle Style = ImGui::GetStyle();
+        const float LeftTextMargin = Style.FramePadding.x;
+        const float PaddingWidth = Style.WindowPadding.x;
+        const float SpacingWidth = Style.ItemSpacing.x;
 
-    ImVec2 TextSize = ImGui::CalcTextSize(Bind->Display);
-    float TextWidth = TextSize.x;
+        const ImVec2 TextSize = ImGui::CalcTextSize(Bind->Display);
+        const float TextWidth = TextSize.x;
 
-    ImGui::SameLine(); ImGui::Dummy(
-        ImVec2(RegionWidth
-             - TextWidth
-             - 2 * LeftTextMargin
-             - 2 * SpacingWidth
-             - LastElementWidth, 0)
-    );
+        ImGui::SameLine(); ImGui::Dummy(
+            ImVec2(RegionWidth
+                - TextWidth
+                - 2 * LeftTextMargin
+                - 2 * SpacingWidth
+                - LastElementWidth, 0)
+        );
+    }
 
     ImGui::SameLine();
     std::string Label = std::string(Bind->Display) + "##" + static_cast<char>(Bind->Id);
@@ -63,8 +65,8 @@ bool SetRightSideButton(BlankImGuiBind* Bind) {
     return Clicked;
 };
 
-bool UpdateBind(BlankImGuiBind* Bind) {
-    const bool Clicked = SetRightSideButton(Bind);
+bool UpdateBind(BlankImGuiBind* Bind, bool NoDummy) {
+    const bool Clicked = SetRightMostButton(Bind, NoDummy);
 
     switch (Bind->Mode) {
         case BindMode::None:

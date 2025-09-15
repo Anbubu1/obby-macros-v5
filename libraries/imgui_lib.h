@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <windows.h>
 #include <iostream>
 #include <string>
@@ -29,14 +30,17 @@ inline bool SetNextWindowSize(
     bool NoTitleBarHeight = false,
     std::array<int, 2> TextElementsInfo = {}
 ) {
-    float FrameHeight = ImGui::GetFrameHeight();
-    float TitleBarHeight = NoTitleBarHeight ? 0 : ImGui::GetFontSize() + Style.FramePadding.y * 2.0f;
-    float ItemSpacing = Style.ItemSpacing.y;
-    float TextLineHeight = ImGui::GetTextLineHeight();
-    float WindowPadding = Style.WindowPadding.y;
+    const float FrameHeight = ImGui::GetFrameHeight();
+    const float TitleBarHeight = NoTitleBarHeight ? 0 : ImGui::GetFontSize() + Style.FramePadding.y * 2.0f;
+    const float ItemSpacing = Style.ItemSpacing.y;
+    const float TextLineHeight = ImGui::GetTextLineHeight();
+    const float WindowPadding = Style.WindowPadding.y;
 
-    int LineWraps = TextElementsInfo[0];
-    int TextElements = TextElementsInfo[1];
+    const int LineWraps = TextElementsInfo[0];
+    const int TextElements = TextElementsInfo[1];
+
+    int MinusOne = VerticalElements - 1;
+    if (MinusOne < 0) MinusOne = 0;
 
     ImGui::SetNextWindowSize(ImVec2(
         FixedWidth,
@@ -51,18 +55,18 @@ inline bool SetNextWindowSize(
     return true;
 };
 
-inline float SetToRightOfElement(const ImGuiStyle& Style, const char* Text = "") {
-    ImVec2 LastElementSize = ImGui::GetItemRectSize();
-    float LastElementWidth = LastElementSize.x;
-    float Indentation = LastElementWidth + Style.ItemInnerSpacing.y;
+inline float SetToRightOfElement(const ImGuiStyle& Style, const char* Text = "", const int SizeOffset = 0) {
+    const ImVec2 LastElementSize = ImGui::GetItemRectSize();
+    const float LastElementWidth = LastElementSize.x;
+    const float Indentation = LastElementWidth + Style.ItemInnerSpacing.y;
     
-    float WindowWidth = ImGui::GetWindowWidth();
-    float WindowPadding = Style.WindowPadding.x;
+    const float WindowWidth = ImGui::GetWindowWidth();
+    const float WindowPadding = Style.WindowPadding.x;
 
-    float TextWidth = Text[0] != '\0' ? ImGui::CalcTextSize(Text).x + WindowPadding - 3 : 0;
+    const float TextWidth = Text[0] != '\0' ? ImGui::CalcTextSize(Text).x + WindowPadding - 3 : 0;
 
     ImGui::SameLine();
     ImGui::Indent(Indentation);
-    ImGui::SetNextItemWidth(WindowWidth - Indentation - 2 * WindowPadding - TextWidth);
+    ImGui::SetNextItemWidth(WindowWidth - Indentation - 2 * WindowPadding - TextWidth + SizeOffset);
     return Indentation;
 };
