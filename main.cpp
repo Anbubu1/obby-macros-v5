@@ -21,6 +21,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     namespace DirectX = Globals::DirectX;
     using Globals::NotifyIconData;
 
+    std::cout << "1" << std::endl;
+
     WNDCLASSEX wc = InitialiseWindow(hInstance);
     RegisterClassEx(&wc);
 
