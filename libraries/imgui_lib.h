@@ -15,12 +15,12 @@ void CleanupDeviceD3D();
 void SetImGuiScale(float scale);
 
 template<size_t N>
-constexpr std::array<int, 2> GetTextElementsInfo(const std::array<int, N>& arr) {
-    int sum = 0;
+consteval std::array<int, 2> GetTextElementsInfo(const std::array<int, N>& Array) {
+    int Sum = 0;
     for (size_t i = 0; i < N; ++i) {
-        sum += arr[i];
+        Sum += Array[i];
     }
-    return {sum, static_cast<int>(N)};
+    return {Sum, static_cast<int>(N)};
 }
 
 inline bool SetNextWindowSize(
@@ -53,20 +53,4 @@ inline bool SetNextWindowSize(
     ), ImGuiCond_Always);
 
     return true;
-};
-
-inline float SetToRightOfElement(const ImGuiStyle& Style, const char* Text = "", const int SizeOffset = 0) {
-    const ImVec2 LastElementSize = ImGui::GetItemRectSize();
-    const float LastElementWidth = LastElementSize.x;
-    const float Indentation = LastElementWidth + Style.ItemInnerSpacing.y;
-    
-    const float WindowWidth = ImGui::GetWindowWidth();
-    const float WindowPadding = Style.WindowPadding.x;
-
-    const float TextWidth = Text[0] != '\0' ? ImGui::CalcTextSize(Text).x + WindowPadding - 3 : 0;
-
-    ImGui::SameLine();
-    ImGui::Indent(Indentation);
-    ImGui::SetNextItemWidth(WindowWidth - Indentation - 2 * WindowPadding - TextWidth + SizeOffset);
-    return Indentation;
 };

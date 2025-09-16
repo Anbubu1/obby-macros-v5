@@ -77,7 +77,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
 
-    CallbackImGuiBind FlickMacroBind([]() {
+    MultiSliderCallbackImGuiBind FlickMacroBind([](const int Value) {
         using Globals::FloatSliderFlags;
         using Globals::IntSliderFlags;
         using Globals::BooleanFlags;
@@ -94,8 +94,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         const double Delay = 1.0 / static_cast<double>(IntSliderFlags["Flick Delay"]);
         LONG PixelsTravelled = 0;
 
-        if (Globals::BooleanFlags["Human-like Flick"]) {
-            const LONG TotalPixels = IntSliderFlags["Flick Angle"] * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
+        if (BooleanFlags["Human-like Flick"]) {
+            const LONG TotalPixels = Value * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
             const double Duration = 1.0 / static_cast<double>(IntSliderFlags["Flick Duration"]);
 
             auto DoPhase = [&](bool Reversed) {
@@ -147,7 +147,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             Wait(Delay);
             DoPhase(true);
         } else {
-            const LONG Pixels = IntSliderFlags["Flick Angle"] * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
+            const LONG Pixels = Value * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
 
             MouseInput->dx = Pixels;
             SendInput(1, &Input, sizeof(INPUT));
@@ -157,11 +157,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             MouseInput->dx = -Pixels;
             SendInput(1, &Input, sizeof(INPUT));
         }
-    });
-
-    MultiSliderCallbackImGuiBind TestMacroBind([](const int Value) {
-        std::cerr << std::to_string(Value) << std::endl;
-    });
+    }, 90, -360, 360, "%d°");
 
     {
         Globals::IntSliderFlags["Flick Angle"] = 90;
@@ -204,7 +200,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
-            ImGuiStyle Style = ImGui::GetStyle();
+            const ImGuiStyle Style = ImGui::GetStyle();
 
             constexpr auto WindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
@@ -219,8 +215,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 ImGui::Checkbox("Flick Macro", &BooleanFlags["Flick Macro"]);
                 FlickMacroBind.Update();
                 ImGui::Checkbox("Human-like Flick", &BooleanFlags["Human-like Flick"]);
-                ImGui::Checkbox("Test Macro", &BooleanFlags["Test Macro"]);
-                TestMacroBind.Update();
                 ImGui::End();
             }
 
@@ -254,61 +248,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             if (SetNextWindowSize(
                 Style,
                 293,
-                4
+                3
             )&& ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
                 constexpr int AddSubtractIntSliderButtonWidth = 46;
                 const int FramePaddingTotal = Style.FramePadding.x * 2;
 
-                {
-                    ImGui::SetNextItemWidth(ImGui::CalcTextSize("-360").x + FramePaddingTotal + AddSubtractIntSliderButtonWidth);
-                    if (ImGui::InputInt("## Set Flick Angle", &IntSliderFlags["Flick Angle"])) {
-                        IntSliderFlags["Flick Angle"] = std::clamp(IntSliderFlags["Flick Angle"], -360, 360);
-                    }
+                const float RegionWidth = ImGui::GetContentRegionAvail().x;
+                const float FinalRegionWidth = RegionWidth - Style.ItemInnerSpacing.x;
 
-                    float Indentation = SetToRightOfElement(Style, "Flick Angle"); {
-                        ImGui::SliderInt("Flick Angle", &IntSliderFlags["Flick Angle"], -360, 360, "%d°");
-                        ImGui::Unindent(Indentation);
-                        ImGui::SetItemTooltip("The angle of the flicks.");
-                    }
+                {
+                    FloatSliderFlags["Flick Sensitivity"] = std::clamp(FloatSliderFlags["Flick Sensitivity"], 0.0f, 10.0f);
+
+                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize("Flick Sensitivity").x);
+                    ImGui::SliderFloat("Flick Sensitivity", &FloatSliderFlags["Flick Sensitivity"], 0.0f, 10.0f, "%.2f");
+                    ImGui::SetItemTooltip("Set this slider to your in-game roblox sensitivity.");
                 }
 
                 {
-                    ImGui::SetNextItemWidth(ImGui::CalcTextSize("10.00").x + FramePaddingTotal);
-                    if (ImGui::InputFloat("## Set Flick Sensitivity", &FloatSliderFlags["Flick Sensitivity"], 0.0f, 0.0f, "%.2f")) {
-                        FloatSliderFlags["Flick Sensitivity"] = std::clamp(FloatSliderFlags["Flick Sensitivity"], 0.0f, 10.0f);
-                    }
+                    IntSliderFlags["Flick Delay"] = std::clamp(IntSliderFlags["Flick Delay"], 1, 240);
 
-                    float Indentation = SetToRightOfElement(Style, "Flick Sensitivity"); {
-                        ImGui::SliderFloat("Flick Sensitivity", &FloatSliderFlags["Flick Sensitivity"], 0.0f, 10.0f, "%.2f");
-                        ImGui::Unindent(Indentation);
-                        ImGui::SetItemTooltip("Set this slider to your in-game roblox sensitivity.");
-                    }
+                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize("Flick Delay").x);
+                    ImGui::SliderInt("Flick Delay", &IntSliderFlags["Flick Delay"], 1, 240, "1 / %ds");
+                    ImGui::SetItemTooltip("The delay in between flicking.");
                 }
 
                 {
-                    ImGui::SetNextItemWidth(ImGui::CalcTextSize("240").x + FramePaddingTotal + AddSubtractIntSliderButtonWidth);
-                    if (ImGui::InputInt("## Set Flick Delay", &IntSliderFlags["Flick Delay"])) {
-                        IntSliderFlags["Flick Delay"] = std::clamp(IntSliderFlags["Flick Delay"], 1, 240);
-                    }
+                    IntSliderFlags["Flick Duration"] = std::clamp(IntSliderFlags["Flick Duration"], 1, 240);
 
-                    float Indentation = SetToRightOfElement(Style, "Flick Delay"); {
-                        ImGui::SliderInt("Flick Delay", &IntSliderFlags["Flick Delay"], 1, 240, "1 / %ds");
-                        ImGui::Unindent(Indentation);
-                        ImGui::SetItemTooltip("The delay in between flicking.");
-                    }
-                }
-
-                {
-                    ImGui::SetNextItemWidth(ImGui::CalcTextSize("240").x + FramePaddingTotal + AddSubtractIntSliderButtonWidth);
-                    if (ImGui::InputInt("## Set Flick Duration", &IntSliderFlags["Flick Duration"])) {
-                        IntSliderFlags["Flick Duration"] = std::clamp(IntSliderFlags["Flick Duration"], 1, 240);
-                    }
-
-                    float Indentation = SetToRightOfElement(Style, "Flick Duration"); {
-                        ImGui::SliderInt("Flick Duration", &IntSliderFlags["Flick Duration"], 1, 240, "1 / %ds");
-                        ImGui::Unindent(Indentation);
-                        ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flick\" is off.");
-                    }
+                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize("Flick Duration").x);
+                    ImGui::SliderInt("Flick Duration", &IntSliderFlags["Flick Duration"], 1, 240, "1 / %ds");
+                    ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flick\" is off.");
                 }
 
                 ImGui::End();

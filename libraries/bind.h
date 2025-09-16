@@ -157,9 +157,9 @@ public:
     SliderCallbackImGuiBind(
         std::function<void(int)> Callback,
         const char* Label = "",
-        int DefaultValue = 0,
-        int Min = 0,
-        int Max = 100,
+        const int DefaultValue = 0,
+        const int Min = 0,
+        const int Max = 100,
         const char* Format = "%d"
     ) : BlankImGuiBind(UNUSABLE_VK, BindMode::None),
         Callback(Callback),
@@ -221,9 +221,21 @@ public:
     std::function<void(int)> Callback;
 
     bool WindowToggle = false;
+    const int DefaultValue, Min, Max;
+    const char* Format;
 
-    MultiSliderCallbackImGuiBind(std::function<void(int)> cb)
-    : BlankImGuiBind(UNUSABLE_VK, BindMode::None), Callback(cb) {
+    MultiSliderCallbackImGuiBind(
+        std::function<void(int)> cb,
+        int DefaultValue = 0,
+        int Min = 0,
+        int Max = 100,
+        const char* Format = "%d"
+    ) : BlankImGuiBind(UNUSABLE_VK, BindMode::None),
+        Callback(cb),
+        DefaultValue(DefaultValue),
+        Min(Min),
+        Max(Max),
+        Format(Format) {
         Type = BindType::Multi;
         Display = "BINDS";
         Key = "BINDS";
@@ -263,7 +275,7 @@ public:
 
             const bool Clicked = ImGui::Button("+");
             if (Clicked && CallbackBinds.size() < CallbackBinds.capacity()) {
-                CallbackBinds.emplace_back(Callback);
+                CallbackBinds.emplace_back(Callback, "", DefaultValue, Min, Max, Format);
             }
 
             ImGui::End();
