@@ -33,21 +33,16 @@ struct DisplayMapInitializer {
 
 static DisplayMapInitializer _displayMapInit;
 
-bool SetRightMostButton(BlankImGuiBind* Bind, bool NoDummy) {
+bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy) {
     if (!NoDummy) {
-        const ImVec2 RegionSize = ImGui::GetContentRegionAvail();
-        const float RegionWidth = RegionSize.x;
-
-        const ImVec2 LastElementSize = ImGui::GetItemRectSize();
-        const float LastElementWidth = LastElementSize.x;
+        const float RegionWidth = ImGui::GetContentRegionAvail().x;
+        const float LastElementWidth = ImGui::GetItemRectSize().x;
+        const float TextWidth = ImGui::CalcTextSize(Bind->Display.c_str()).x;
 
         const ImGuiStyle Style = ImGui::GetStyle();
         const float LeftTextMargin = Style.FramePadding.x;
         const float PaddingWidth = Style.WindowPadding.x;
         const float SpacingWidth = Style.ItemSpacing.x;
-
-        const ImVec2 TextSize = ImGui::CalcTextSize(Bind->Display);
-        const float TextWidth = TextSize.x;
 
         ImGui::SameLine(); ImGui::Dummy(
             ImVec2(RegionWidth
@@ -59,13 +54,13 @@ bool SetRightMostButton(BlankImGuiBind* Bind, bool NoDummy) {
     }
 
     ImGui::SameLine();
-    std::string Label = std::string(Bind->Display) + "##" + static_cast<char>(Bind->Id);
+    const std::string Label = Bind->Display + "##" + static_cast<char>(Bind->Id);
     const bool Clicked = ImGui::Button(Label.c_str());
 
     return Clicked;
 };
 
-bool UpdateBind(BlankImGuiBind* Bind, bool NoDummy) {
+bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy) {
     const bool Clicked = SetRightMostButton(Bind, NoDummy);
 
     switch (Bind->Mode) {
@@ -78,7 +73,7 @@ bool UpdateBind(BlankImGuiBind* Bind, bool NoDummy) {
         }
 
         case BindMode::Hold: {
-            ImGui::SetItemTooltip("Hold the bind to toggle the checkbox!");
+            ImGui::SetItemTooltip("Hold the bind to toggle the checkbox!");            
             break;
         }
 
@@ -90,8 +85,8 @@ bool UpdateBind(BlankImGuiBind* Bind, bool NoDummy) {
 
     if (Clicked) {
         if (Binds::Binding != nullptr) {
-            UINT BoundId = *Binds::Binding;
-            BlankImGuiBind* BindingBind = IdToBind[BoundId];
+            const UINT BoundId = *Binds::Binding;
+            BlankImGuiBind* const BindingBind = IdToBind[*Binds::Binding];
 
             BindingBind->Display = BindingBind->Key;
             Binds::Binding = nullptr;
@@ -104,24 +99,25 @@ bool UpdateBind(BlankImGuiBind* Bind, bool NoDummy) {
     return Clicked;
 }
 
-void SetBindKey(BlankImGuiBind* Bind, UINT VK) {
-    const char* ReadableKeyName = GetReadableKeyNameChar(VK);
+void SetBindKey(BlankImGuiBind* const Bind, const UINT VK) {
+    std::string ReadableKeyName = GetReadableKeyName(VK);
 
-    const size_t len = strlen(ReadableKeyName);
+    const size_t len = strlen(ReadableKeyName.c_str());
 
     if (len == 1) {
-        unsigned char ASCII = static_cast<unsigned char>(ReadableKeyName[0]);
+        const unsigned char ASCII = static_cast<unsigned char>(ReadableKeyName[0]);
 
-        if (DisplayMap[ASCII] == nullptr) {
-            Bind->Display = to_upper(ReadableKeyName);
+        const char* FixedKeyName = DisplayMap[ASCII];
+
+        if (FixedKeyName == nullptr) {
+            Bind->Display = ToUpper(ReadableKeyName);
             Bind->Key = ReadableKeyName;
         } else {
-            const char* FixedKeyName = DisplayMap[ASCII];
-            Bind->Display = to_upper(FixedKeyName);
+            Bind->Display = ToUpper(FixedKeyName);
             Bind->Key = FixedKeyName;
         }
     } else {
-        Bind->Display = to_upper(ReadableKeyName);
+        Bind->Display = ToUpper(ReadableKeyName);
         Bind->Key = ReadableKeyName;
     }
 

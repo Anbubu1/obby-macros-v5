@@ -21,6 +21,10 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             Binds::KeyPressed.fire(p->vkCode);
         }
+
+        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+            Binds::KeyReleased.fire(p->vkCode);
+        }
     }
 
     return CallNextHookEx(Globals::g_hHook, nCode, wParam, lParam);

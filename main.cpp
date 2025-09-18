@@ -1,11 +1,13 @@
 #include <unordered_map>
 #include <algorithm>
 #include <iostream>
+#include <chrono>
 
 #include "imgui_lib.h"
 #include "general.h"
 #include "globals.h"
 #include "wndproc.h"
+#include "macros.h"
 #include "tasks.h"
 #include "bind.h"
 #include "init.h"
@@ -20,8 +22,11 @@
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     namespace DirectX = Globals::DirectX;
     using Globals::NotifyIconData;
+    using Globals::FloatSliderFlags;
+    using Globals::IntSliderFlags;
+    using Globals::BooleanFlags;
 
-    std::cout << "1" << std::endl;
+    std::cerr << ToUpper("hello woRLD!") << std::endl;
 
     WNDCLASSEX wc = InitialiseWindow(hInstance);
     RegisterClassEx(&wc);
@@ -79,97 +84,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
 
-    MultiSliderCallbackImGuiBind FlickMacroBind([](const int Value) {
-        using Globals::FloatSliderFlags;
-        using Globals::IntSliderFlags;
-        using Globals::BooleanFlags;
-        using Globals::ROBLOX_SENS_MULT;
-
-        if (!BooleanFlags["Flick Macro"]) return;
-
-        INPUT Input = { 0 };
-        Input.type = INPUT_MOUSE;
-
-        MOUSEINPUT* MouseInput = &Input.mi;
-        MouseInput->dwFlags = MOUSEEVENTF_MOVE;
-
-        const double Delay = 1.0 / static_cast<double>(IntSliderFlags["Flick Delay"]);
-        LONG PixelsTravelled = 0;
-
-        if (BooleanFlags["Human-like Flick"]) {
-            const LONG TotalPixels = Value * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
-            const double Duration = 1.0 / static_cast<double>(IntSliderFlags["Flick Duration"]);
-
-            auto DoPhase = [&](bool Reversed) {
-                LONG Moved = 0;
-                double ElapsedTime = 0.0;
-                const double PhaseDuration = Duration / 2.0;
-
-                if (PhaseDuration <= 0.0) {
-                    LONG rem = TotalPixels;
-                    MouseInput->dx = Reversed ? -rem : rem;
-                    SendInput(1, &Input, sizeof(INPUT));
-                    PixelsTravelled += rem;
-                    return;
-                }
-
-                while (Moved < TotalPixels) {
-                    ElapsedTime += ShortWait();
-
-                    double t = ElapsedTime / PhaseDuration;
-                    if (t < 0.0) t = 0.0;
-                    if (t > 1.0) t = 1.0;
-
-                    double Smoothed = 3.0 * t * t - 2.0 * t * t * t;
-
-                    LONG Target = static_cast<LONG>(std::round(Smoothed * static_cast<double>(TotalPixels)));
-                    LONG deltaPixels = Target - Moved;
-
-                    if (deltaPixels > 0) {
-                        MouseInput->dx = Reversed ? -deltaPixels : deltaPixels;
-                        SendInput(1, &Input, sizeof(INPUT));
-                        Moved += deltaPixels;
-                        PixelsTravelled += deltaPixels;
-                    }
-
-                    if (t >= 1.0 && Moved < TotalPixels) {
-                        LONG rem = TotalPixels - Moved;
-                        if (rem > 0) {
-                            MouseInput->dx = Reversed ? -rem : rem;
-                            SendInput(1, &Input, sizeof(INPUT));
-                            Moved += rem;
-                            PixelsTravelled += rem;
-                        }
-                        break;
-                    }
-                }
-            };
-
-            DoPhase(false);
-            Wait(Delay);
-            DoPhase(true);
-        } else {
-            const LONG Pixels = Value * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
-
-            MouseInput->dx = Pixels;
-            SendInput(1, &Input, sizeof(INPUT));
-
-            Wait(Delay);
-
-            MouseInput->dx = -Pixels;
-            SendInput(1, &Input, sizeof(INPUT));
-        }
+    MultiSliderCallbackImGuiBind FlickBackMacroBind([](const int Value) {
+        if (BooleanFlags["Flick Back Macro"]) MouseFlick(Value);
     }, 90, -360, 360, "%d°");
 
+    MultiSliderCallbackImGuiBind SnapFlickMacroBind([](const int Value) {
+        if (BooleanFlags["Snap Flick Macro"]) MouseFlick(Value, true);
+    }, 90, -360, 360, "%d°");
+
+    MultiSliderCallbackImGuiBind SpamFlickMacroBind([](const int Value) {
+        if (BooleanFlags["Spam Flick Macro"]) MouseFlick(Value);
+        Wait(1.0 / 60.0);
+    }, 90, -360, 360, "%d°", BindMode::Hold);
+
     {
-        Globals::IntSliderFlags["Flick Angle"] = 90;
-        Globals::FloatSliderFlags["Flick Sensitivity"] = 1.0f;
-        Globals::IntSliderFlags["Flick Delay"] = 60;
-        Globals::IntSliderFlags["Flick Duration"] = 60;
+        IntSliderFlags["Flick Angle"] = 90;
+        FloatSliderFlags["Flick Sensitivity"] = 1.0f;
+        IntSliderFlags["Flick Delay"] = 60;
+        IntSliderFlags["Flick Duration"] = 60;
     }
 
     ImVec2 ItemSpacing = ImGui::GetStyle().ItemSpacing;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ItemSpacing.x, ItemSpacing.x));
+
+    auto Time = std::chrono::high_resolution_clock::now();
 
     while (msg.message != WM_QUIT) {
         if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
@@ -178,54 +116,75 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             continue;
         }
 
+        // INSERT to close and open GUI
         if (GetAsyncKeyState(VK_INSERT) & 1) {
             Globals::ImGuiShown = !Globals::ImGuiShown;
             ShowWindow(hwnd, Globals::ImGuiShown ? SW_SHOW : SW_HIDE);
         }
 
-        if (Globals::ImGuiShown) {
-            /*
-                Some info:
-                    SetNextWindowSize takes ImGuiStyle, a fixed width, and the amount of non-text-label elements
-                        The fourth parameter is if to take the title-bar to calculation
-                        The fifth parameter is given by an array of length 2 of [len, sum] where:
-                            len is the amount of text-label elements
-                            sum is the amount of line-wraps all text-label elements give
-                        unfortunately, this is all hardcoded, but since this is just the gui section, doesn't really matter that much in the long-term.
-            */
+        // RenderStepped Handler
+        const auto Now = std::chrono::high_resolution_clock::now();
+        Globals::RenderStepped.fire(Now - Time);
+        Time = Now;
 
-            using Globals::FloatSliderFlags;
-            using Globals::IntSliderFlags;
-            using Globals::BooleanFlags;
+        if (!Globals::ImGuiShown) {
+            DirectX::g_pSwapChain->Present(1, 0);
+            continue;
+        }
 
-            ImGui_ImplDX11_NewFrame();
-            ImGui_ImplWin32_NewFrame();
-            ImGui::NewFrame();
+        /*
+            Some info:
+                SetNextWindowSize takes ImGuiStyle, a fixed width, and the amount of non-text-label elements
+                    The fourth parameter is if to take the title-bar to calculation
+                    The fifth parameter is given by an array of length 2 of [len, sum] where:
+                        len is the amount of text-label elements
+                        sum is the amount of line-wraps all text-label elements give
+                    unfortunately, this is all hardcoded, but since this is just the gui section, doesn't really matter that much in the long-term.
+        */
 
-            const ImGuiStyle Style = ImGui::GetStyle();
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
 
-            constexpr auto WindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+        const ImGuiStyle Style = ImGui::GetStyle();
 
+        constexpr auto WindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+
+        {
+            constexpr int WindowWidth = 225;
+            constexpr int NonTextElements = 3;
+            constexpr int IgnoreTitleBar = false;
+            constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1});
             if (SetNextWindowSize(
                 Style,
-                200,
-                3,
-                false,
-                GetTextElementsInfo(std::array{1})
+                WindowWidth,
+                NonTextElements,
+                IgnoreTitleBar,
+                TextElementsInfo
             )&& ImGui::Begin("Input Macros", nullptr, WindowFlags)) {
                 ImGui::Text("Mouse Actions");
-                ImGui::Checkbox("Flick Macro", &BooleanFlags["Flick Macro"]);
-                FlickMacroBind.Update();
-                ImGui::Checkbox("Human-like Flick", &BooleanFlags["Human-like Flick"]);
+                ImGui::Checkbox("Flick Back Macro", &BooleanFlags["Flick Back Macro"]);
+                FlickBackMacroBind.Update();
+                ImGui::Checkbox("Snap Flick Macro", &BooleanFlags["Snap Flick Macro"]);
+                SnapFlickMacroBind.Update();
+                ImGui::Checkbox("Spam Flick Macro", &BooleanFlags["Spam Flick Macro"]);
+                SpamFlickMacroBind.Update();
                 ImGui::End();
             }
+        }
 
+        {
+            constexpr int WindowWidth = 310;
+            constexpr int NonTextElements = 0;
+            constexpr int IgnoreTitleBar = false;
+            // e.g. a line of text, then another line of text, and another line of text, followed by 2 lines of text
+            constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1, 1, 1, 2});
             if (SetNextWindowSize(
                 Style,
-                310,
-                0,
-                false,
-                GetTextElementsInfo(std::array{1, 1, 1, 2})
+                WindowWidth,
+                NonTextElements,
+                IgnoreTitleBar,
+                TextElementsInfo
             )&& ImGui::Begin("Information", nullptr, WindowFlags)) {
                 ImGui::PushTextWrapPos();
                 ImGui::TextColored(ImVec4(1, 0.2, 0.2, 1), "INSERT KEY TO OPEN/CLOSE!");
@@ -235,28 +194,39 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 ImGui::PopTextWrapPos();
                 ImGui::End();
             }
+        }
 
+        {
+            constexpr int WindowWidth = 144;
+            constexpr int NonTextElements = 1;
+            constexpr int IgnoreTitleBar = true;
             if (SetNextWindowSize(
                 Style,
-                144,
-                1,
-                true
+                WindowWidth,
+                NonTextElements,
+                IgnoreTitleBar
             )&& ImGui::Begin("## Close Application Window", nullptr, WindowFlags | ImGuiWindowFlags_NoTitleBar)) {
                 if (ImGui::Button("Close Application")) PostQuitMessage(0);
                 ImGui::SetItemTooltip("Closes the application.");
                 ImGui::End();
             }
+        }
 
+        {
+            constexpr int WindowWidth = 250;
+            constexpr int NonTextElements = 4;
             if (SetNextWindowSize(
                 Style,
-                293,
-                3
+                WindowWidth,
+                NonTextElements
             )&& ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
                 constexpr int AddSubtractIntSliderButtonWidth = 46;
                 const int FramePaddingTotal = Style.FramePadding.x * 2;
 
                 const float RegionWidth = ImGui::GetContentRegionAvail().x;
                 const float FinalRegionWidth = RegionWidth - Style.ItemInnerSpacing.x;
+
+                ImGui::Checkbox("Human-like Flick", &BooleanFlags["Human-like Flick"]);
 
                 {
                     FloatSliderFlags["Flick Sensitivity"] = std::clamp(FloatSliderFlags["Flick Sensitivity"], 0.0f, 10.0f);
@@ -284,14 +254,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
                 ImGui::End();
             }
-
-            ImGui::Render();
-            constexpr float clear_color[4] = { 0.00f, 0.00f, 0.00f, 0.00f };
-            DirectX::g_pd3dDeviceContext->OMSetRenderTargets(1, &DirectX::g_mainRenderTargetView, NULL);
-            DirectX::g_pd3dDeviceContext->ClearRenderTargetView(DirectX::g_mainRenderTargetView, clear_color);
-            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
         }
 
+        ImGui::Render();
+        constexpr float ClearColor[4] = { 0.00f, 0.00f, 0.00f, 0.00f };
+        DirectX::g_pd3dDeviceContext->OMSetRenderTargets(1, &DirectX::g_mainRenderTargetView, NULL);
+        DirectX::g_pd3dDeviceContext->ClearRenderTargetView(DirectX::g_mainRenderTargetView, ClearColor);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
         DirectX::g_pSwapChain->Present(1, 0);
     }
 

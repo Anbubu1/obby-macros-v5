@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <functional>
 #include <iostream>
+#include <chrono>
 #include <string>
 #include <thread>
 #include <mutex>
@@ -17,7 +18,9 @@
 
 namespace Binds {
     inline UINT* Binding = nullptr;
+    inline UINT* OpenedMultiSliderWindow = nullptr;
     inline Signal<UINT> KeyPressed;
+    inline Signal<UINT> KeyReleased;
 };
 
 enum class BindMode {
@@ -42,16 +45,16 @@ extern const char* DisplayMap[256];
 extern std::unordered_map<UINT, BlankImGuiBind*> IdToBind;
 extern UINT NextId;
 
-bool UpdateBind(BlankImGuiBind* Bind, bool NoDummy = false);
-void SetBindKey(BlankImGuiBind* Bind, UINT VK);
-bool SetRightMostButton(BlankImGuiBind* Bind, bool NoDummy = false);
+bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy = false);
+void SetBindKey(BlankImGuiBind* const Bind, const UINT VK);
+bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy = false);
 
 class BlankImGuiBind {
 public:
     BindMode Mode = BindMode::None;
     BindType Type = BindType::None;
-    const char* Display = "NONE";
-    const char* Key = "NONE";
+    std::string Display = "NONE";
+    std::string Key = "NONE";
     UINT VK = UNUSABLE_VK;
     UINT Id = 0;
 
@@ -72,6 +75,16 @@ public:
     virtual ~BlankImGuiBind() = default;
 };
 
+inline bool UpdateKey(BlankImGuiBind* const Bind, const UINT VK) {
+    if (Binds::Binding == &Bind->Id) {
+        SetBindKey(Bind, VK);
+        Binds::Binding = nullptr;
+        return true;
+    }
+    
+    return false;
+}
+
 class ImGuiBind : BlankImGuiBind {
 public:
     Connection<UINT> OnPressConnection;
@@ -81,10 +94,8 @@ public:
     : BlankImGuiBind(VK, Mode) {
         Type = BindType::Normal;
         OnPressConnection = Binds::KeyPressed.connect([this](UINT VK_Key) {
-            if (Binds::Binding == &this->Id) {
-                SetBindKey(this, VK_Key);
-                Binds::Binding = nullptr;
-            } else if (this->Mode == BindMode::Toggle && VK_Key == this->VK) {
+            if (UpdateKey(this, VK_Key)) return;
+            if (this->Mode == BindMode::Toggle && VK_Key == this->VK) {
                 this->Flag = !this->Flag;
             }
         });
@@ -124,18 +135,43 @@ class CallbackImGuiBind : public BlankImGuiBind {
 public:
     Connection<UINT> OnPressConnection;
     std::function<void()> Callback;
+    bool Holding;
 
     CallbackImGuiBind(
         std::function<void()> cb,
+        BindMode BindMode = BindMode::None,
         UINT VK = UNUSABLE_VK
-    ) : BlankImGuiBind(VK, BindMode::None),
+    ) : BlankImGuiBind(VK, BindMode),
         Callback(cb) {
         Type = BindType::Callback;
-        OnPressConnection = Binds::KeyPressed.connect([this](UINT VK_Key) {
-            if (Binds::Binding == &this->Id) {
-                SetBindKey(this, VK_Key);
-                Binds::Binding = nullptr;
-            } else if (VK_Key == this->VK) {
+        OnPressConnection = Binds::KeyPressed.connect([this](const UINT VK_Key) {
+            if (UpdateKey(this, VK_Key)) return;
+            if (VK_Key != this->VK) return;
+            if (this->Mode == BindMode::Hold) {
+                this->Holding = true;
+                auto HoldingConnection = std::make_shared<Connection<UINT>>(Connection<UINT>{});
+
+                *HoldingConnection = Binds::KeyReleased.connect([this, HoldingConnection](const UINT VK_Key) {
+                    if (this->VK != VK_Key) return;
+                    HoldingConnection->disconnect();
+                    this->Holding = false;
+                });
+
+                while (this->Holding) {
+                    using namespace std::chrono;
+
+                    const auto Start = high_resolution_clock::now();
+
+                    this->Callback();
+
+                    const auto Elapsed = high_resolution_clock::now() - Start;
+
+                    if (Elapsed < milliseconds(10)) {
+                        std::this_thread::sleep_for(milliseconds(10)
+                         - duration_cast<milliseconds>(Elapsed));
+                    }
+                }
+            } else {
                 this->Callback();
             }
         });
@@ -150,18 +186,20 @@ class SliderCallbackImGuiBind : public BlankImGuiBind {
 public:
     Connection<UINT> OnPressConnection;
     std::function<void(int)> Callback;
-    const char *Label, *Format;
+    std::string Label, Format;
     int Value, Min, Max;
     bool Destroying;
+    bool Holding;
 
     SliderCallbackImGuiBind(
         std::function<void(int)> Callback,
-        const char* Label = "",
+        const std::string Label = "",
         const int DefaultValue = 0,
         const int Min = 0,
         const int Max = 100,
-        const char* Format = "%d"
-    ) : BlankImGuiBind(UNUSABLE_VK, BindMode::None),
+        const std::string Format = "%d",
+        BindMode BindMode = BindMode::None
+    ) : BlankImGuiBind(UNUSABLE_VK, BindMode),
         Callback(Callback),
         Label(Label),
         Value(DefaultValue),
@@ -169,27 +207,52 @@ public:
         Max(Max),
         Format(Format) {
         Type = BindType::Callback;
-        OnPressConnection = Binds::KeyPressed.connect([this](UINT VK_Key) {
-            if (Binds::Binding == &this->Id) {
-                SetBindKey(this, VK_Key);
-                Binds::Binding = nullptr;
-            } else if (VK_Key == this->VK) {
+        OnPressConnection = Binds::KeyPressed.connect([this](const UINT VK_Key) {
+            if (UpdateKey(this, VK_Key)) return;
+            if (VK_Key != this->VK) return;
+            if (this->Mode == BindMode::Hold) {
+                this->Holding = true;
+                auto HoldingConnection = std::make_shared<Connection<UINT>>(Connection<UINT>{});
+
+                *HoldingConnection = Binds::KeyReleased.connect([this, HoldingConnection](const UINT VK_Key) {
+                    if (this->VK != VK_Key) return;
+                    HoldingConnection->disconnect();
+                    this->Holding = false;
+                });
+
+                while (this->Holding) {
+                    using namespace std::chrono;
+
+                    const auto Start = high_resolution_clock::now();
+
+                    this->Callback(Value);
+
+                    const auto Elapsed = high_resolution_clock::now() - Start;
+
+                    if (Elapsed < milliseconds(10)) {
+                        std::this_thread::sleep_for(milliseconds(10)
+                         - duration_cast<milliseconds>(Elapsed));
+                    }
+                }
+            } else {
                 this->Callback(Value);
             }
         });
     }
 
     void Update() override {
+        using namespace std::string_literals;
+        
         const std::string IdEnding = "## " + std::to_string(Id);
 
-        const std::string ConcatenatedButtonLabel = std::string("-") + IdEnding;
+        const std::string ConcatenatedButtonLabel = "-"s + IdEnding;
         Destroying = ImGui::Button(ConcatenatedButtonLabel.c_str());
 
-        const std::string ConcatenatedLabel = std::string(Label) + IdEnding;
+        const std::string ConcatenatedLabel = Label + IdEnding;
 
         const float RegionWidth = ImGui::GetContentRegionAvail().x;
         const float LastElementWidth = ImGui::GetItemRectSize().x;
-        const float DisplayWidth = ImGui::CalcTextSize(this->Display).x;
+        const float DisplayWidth = ImGui::CalcTextSize(this->Display.c_str()).x;
 
         const ImGuiStyle Style = ImGui::GetStyle();
         const float InnerSpacingWidth = Style.ItemInnerSpacing.x;
@@ -203,7 +266,7 @@ public:
             - InnerSpacingWidth * 2
             - DisplayWidth
         );
-        ImGui::SliderInt(ConcatenatedLabel.c_str(), &Value, Min, Max, Format);
+        ImGui::SliderInt(ConcatenatedLabel.c_str(), &Value, Min, Max, Format.c_str());
 
         UpdateBind(this, true);
     }
@@ -213,24 +276,24 @@ public:
     }
 };
 
+using namespace Globals::MultiSliderCallbackImGuiBindSettings;
 class MultiSliderCallbackImGuiBind : public BlankImGuiBind {
 public:
-    static constexpr int MAX_CALLBACK_BINDS = Globals::MultiSliderCallbackImGuiBindSettings::MAX_CALLBACK_BINDS;
-
     std::vector<SliderCallbackImGuiBind> CallbackBinds;
-    std::function<void(int)> Callback;
+    const std::function<void(int)> Callback;
 
     bool WindowToggle = false;
     const int DefaultValue, Min, Max;
-    const char* Format;
+    const std::string Format;
 
     MultiSliderCallbackImGuiBind(
         std::function<void(int)> cb,
         int DefaultValue = 0,
         int Min = 0,
         int Max = 100,
-        const char* Format = "%d"
-    ) : BlankImGuiBind(UNUSABLE_VK, BindMode::None),
+        const std::string Format = "%d",
+        BindMode BindMode = BindMode::None
+    ) : BlankImGuiBind(UNUSABLE_VK, BindMode),
         Callback(cb),
         DefaultValue(DefaultValue),
         Min(Min),
@@ -247,13 +310,23 @@ public:
         if (Clicked) WindowToggle = !WindowToggle;
         if (!WindowToggle) return;
 
+        if (Binds::OpenedMultiSliderWindow && *Binds::OpenedMultiSliderWindow != this->Id) {
+            const auto ImGuiBind = IdToBind[*Binds::OpenedMultiSliderWindow];
+            if (auto* const OtherMultiBind = dynamic_cast<MultiSliderCallbackImGuiBind*>(ImGuiBind)) {
+                OtherMultiBind->WindowToggle = false;
+                Binds::OpenedMultiSliderWindow = nullptr;
+            }
+        }
+
+        Binds::OpenedMultiSliderWindow = &this->Id;
+
         std::string Window = "## " + std::to_string(this->Id);
 
         ImGui::SetNextWindowPos(ImGui::GetItemRectMax());
 
         if (SetNextWindowSize(
             ImGui::GetStyle(),
-            150,
+            WINDOW_WIDTH,
             std::clamp(static_cast<int>(CallbackBinds.size()) + 1, 1, 10),
             true
         )&& ImGui::Begin(
@@ -275,7 +348,7 @@ public:
 
             const bool Clicked = ImGui::Button("+");
             if (Clicked && CallbackBinds.size() < CallbackBinds.capacity()) {
-                CallbackBinds.emplace_back(Callback, "", DefaultValue, Min, Max, Format);
+                CallbackBinds.emplace_back(Callback, "", DefaultValue, Min, Max, Format, Mode);
             }
 
             ImGui::End();

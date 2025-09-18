@@ -43,6 +43,19 @@ public:
         slots_.emplace(id, std::move(cb));
         return Connection<Args...>(this, id);
     }
+    
+    Connection<Args...> once(Callback cb) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::size_t id = nextId_++;
+
+        Connection<Args...> conn(this, id);
+        slots_[id] = [cb = std::move(cb), conn](Args... args) mutable {
+            cb(args...);
+            conn.disconnect();
+        };
+
+        return conn;
+    }
 
     void disconnect(std::size_t id) {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -60,8 +73,13 @@ public:
             std::lock_guard<std::mutex> lock(mutex_);
             snapshot = slots_;
         }
+
         for (auto& [id, cb] : snapshot) {
-            if (cb) cb(args...);
+            if (cb) {
+                std::thread([cb, args...]() mutable {
+                    cb(args...);
+                }).detach();
+            }
         }
     }
 
