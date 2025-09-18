@@ -132,10 +132,12 @@ public:
 };
 
 class CallbackImGuiBind : public BlankImGuiBind {
-public:
+private:
     Connection<UINT> OnPressConnection;
-    std::function<void()> Callback;
     bool Holding;
+
+public:
+    std::function<void()> Callback;
 
     CallbackImGuiBind(
         std::function<void()> cb,
@@ -183,13 +185,18 @@ public:
 };
 
 class SliderCallbackImGuiBind : public BlankImGuiBind {
-public:
+private:
     Connection<UINT> OnPressConnection;
-    std::function<void(int)> Callback;
+    std::string CachedLabel, CachedButtonLabel;
     std::string Label, Format;
+    float SemiFinalWidth;
+    bool Holding = false;
+    bool Cached = false;
+
+public:
+    std::function<void(int)> Callback;
     int Value, Min, Max;
-    bool Destroying;
-    bool Holding;
+    bool Destroying = false;
 
     SliderCallbackImGuiBind(
         std::function<void(int)> Callback,
@@ -242,31 +249,40 @@ public:
 
     void Update() override {
         using namespace std::string_literals;
+
+        if (!Cached) {
+            const std::string IdEnding = "## " + std::to_string(Id);
+
+            CachedButtonLabel = "-"s + IdEnding;
+        }
         
-        const std::string IdEnding = "## " + std::to_string(Id);
+        Destroying = ImGui::Button(CachedButtonLabel.c_str());
 
-        const std::string ConcatenatedButtonLabel = "-"s + IdEnding;
-        Destroying = ImGui::Button(ConcatenatedButtonLabel.c_str());
+        if (!Cached) {
+            const std::string IdEnding = "## " + std::to_string(Id);
 
-        const std::string ConcatenatedLabel = Label + IdEnding;
+            CachedLabel = Label + IdEnding;
+            
+            const float RegionWidth = ImGui::GetContentRegionAvail().x;
+            const float LastElementWidth = ImGui::GetItemRectSize().x;
+            
+            const ImGuiStyle Style = ImGui::GetStyle();
+            const float InnerSpacingWidth = Style.ItemInnerSpacing.x;
+            const float SpacingWidth = Style.ItemSpacing.x;
 
-        const float RegionWidth = ImGui::GetContentRegionAvail().x;
-        const float LastElementWidth = ImGui::GetItemRectSize().x;
+            SemiFinalWidth = RegionWidth
+                           - LastElementWidth
+                           - SpacingWidth * 2
+                           - InnerSpacingWidth * 2;
+
+            Cached = true;
+        }
+
         const float DisplayWidth = ImGui::CalcTextSize(this->Display.c_str()).x;
 
-        const ImGuiStyle Style = ImGui::GetStyle();
-        const float InnerSpacingWidth = Style.ItemInnerSpacing.x;
-        const float SpacingWidth = Style.ItemSpacing.x;
-
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(
-            RegionWidth
-            - LastElementWidth
-            - SpacingWidth * 2
-            - InnerSpacingWidth * 2
-            - DisplayWidth
-        );
-        ImGui::SliderInt(ConcatenatedLabel.c_str(), &Value, Min, Max, Format.c_str());
+        ImGui::SetNextItemWidth(SemiFinalWidth - DisplayWidth);
+        ImGui::SliderInt(CachedLabel.c_str(), &Value, Min, Max, Format.c_str());
 
         UpdateBind(this, true);
     }
@@ -324,12 +340,12 @@ public:
 
         ImGui::SetNextWindowPos(ImGui::GetItemRectMax());
 
-        if (SetNextWindowSize(
+        if (SetNextWindowSize(GetNextWindowSize(
             ImGui::GetStyle(),
             WINDOW_WIDTH,
             std::clamp(static_cast<int>(CallbackBinds.size()) + 1, 1, 10),
             true
-        )&& ImGui::Begin(
+        )) && ImGui::Begin(
             Window.c_str(),
             nullptr,
             ImGuiWindowFlags_NoTitleBar |
@@ -346,8 +362,7 @@ public:
                 }
             }
 
-            const bool Clicked = ImGui::Button("+");
-            if (Clicked && CallbackBinds.size() < CallbackBinds.capacity()) {
+            if (CallbackBinds.size() < CallbackBinds.capacity() && ImGui::Button("+")) {
                 CallbackBinds.emplace_back(Callback, "", DefaultValue, Min, Max, Format, Mode);
             }
 

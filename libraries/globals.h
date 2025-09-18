@@ -21,7 +21,7 @@ namespace Globals {
     inline std::unordered_map<std::string, int> IntSliderFlags = {};
     inline std::unordered_map<std::string, float> FloatSliderFlags = {};
 
-    inline Signal<const std::common_type_t<std::chrono::duration<long long, std::nano>>> RenderStepped;
+    inline Signal<const std::chrono::duration<float>> RenderStepped;
 
     namespace DirectX {
         inline ID3D11Device*           g_pd3dDevice = nullptr;

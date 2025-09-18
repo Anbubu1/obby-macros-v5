@@ -21,9 +21,9 @@ consteval std::array<int, 2> GetTextElementsInfo(const std::array<int, N>& Array
         Sum += Array[i];
     }
     return {Sum, static_cast<int>(N)};
-}
+};
 
-inline bool SetNextWindowSize(
+inline ImVec2 GetNextWindowSize(
     const ImGuiStyle& Style = ImGui::GetStyle(),
     int FixedWidth = 100,
     int VerticalElements = 0,
@@ -42,7 +42,7 @@ inline bool SetNextWindowSize(
     int MinusOne = VerticalElements - 1;
     if (MinusOne < 0) MinusOne = 0;
 
-    ImGui::SetNextWindowSize(ImVec2(
+    return ImVec2(
         FixedWidth,
         WindowPadding * 2
       + ItemSpacing * (VerticalElements - 1)
@@ -50,7 +50,10 @@ inline bool SetNextWindowSize(
       + FrameHeight * VerticalElements
       + TextElements * ItemSpacing
       + LineWraps * TextLineHeight
-    ), ImGuiCond_Always);
+    );
+};
 
+inline bool SetNextWindowSize(const ImVec2 WindowSize) {
+    ImGui::SetNextWindowSize(WindowSize);
     return true;
 };

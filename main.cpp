@@ -26,8 +26,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     using Globals::IntSliderFlags;
     using Globals::BooleanFlags;
 
-    std::cerr << ToUpper("hello woRLD!") << std::endl;
-
     WNDCLASSEX wc = InitialiseWindow(hInstance);
     RegisterClassEx(&wc);
 
@@ -109,12 +107,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     auto Time = std::chrono::high_resolution_clock::now();
 
+    Globals::RenderStepped.connect([](const auto Delta) {
+        std::cerr << "Total Time Rendering: " << std::to_string(Delta.count() * 1000) << "ms" << std::endl;
+    });
+
     while (msg.message != WM_QUIT) {
+
+#ifdef _DEBUG
+        const auto t1 = std::chrono::high_resolution_clock::now();
+#endif
+
         if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
             continue;
         }
+
+#ifdef _DEBUG
+        const auto t2 = std::chrono::high_resolution_clock::now();
+#endif
 
         // INSERT to close and open GUI
         if (GetAsyncKeyState(VK_INSERT) & 1) {
@@ -122,19 +133,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             ShowWindow(hwnd, Globals::ImGuiShown ? SW_SHOW : SW_HIDE);
         }
 
+#ifdef _DEBUG
+        const auto t3 = std::chrono::high_resolution_clock::now();
+#endif
+
         // RenderStepped Handler
         const auto Now = std::chrono::high_resolution_clock::now();
         Globals::RenderStepped.fire(Now - Time);
         Time = Now;
 
+#ifdef _DEBUG
+        const auto t4 = std::chrono::high_resolution_clock::now();
+#endif
+
         if (!Globals::ImGuiShown) {
             DirectX::g_pSwapChain->Present(1, 0);
+
+            std::cout << "Messages: " << std::chrono::duration<float, std::milli>(t2-t1).count() << "ms, "
+                      << "Gui Close Handler: " << std::chrono::duration<float, std::milli>(t3-t2).count() << "ms, "
+                      << "RenderStepped Handler: " << std::chrono::duration<float, std::milli>(t4-t3).count() << "ms, ";
+
             continue;
         }
 
         /*
             Some info:
-                SetNextWindowSize takes ImGuiStyle, a fixed width, and the amount of non-text-label elements
+                GetNextWindowSize takes ImGuiStyle, a fixed width, and the amount of non-text-label elements
                     The fourth parameter is if to take the title-bar to calculation
                     The fifth parameter is given by an array of length 2 of [len, sum] where:
                         len is the amount of text-label elements
@@ -146,7 +170,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
+#ifdef _DEBUG
+        const auto t5 = std::chrono::high_resolution_clock::now();
+#endif
+
         const ImGuiStyle Style = ImGui::GetStyle();
+
+#ifdef _DEBUG
+        const auto t6 = std::chrono::high_resolution_clock::now();
+#endif
 
         constexpr auto WindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
@@ -155,13 +187,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             constexpr int NonTextElements = 3;
             constexpr int IgnoreTitleBar = false;
             constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1});
-            if (SetNextWindowSize(
+
+            static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
                 WindowWidth,
                 NonTextElements,
                 IgnoreTitleBar,
                 TextElementsInfo
-            )&& ImGui::Begin("Input Macros", nullptr, WindowFlags)) {
+            );
+
+            if (SetNextWindowSize(WindowSize) && ImGui::Begin("Input Macros", nullptr, WindowFlags)) {
                 ImGui::Text("Mouse Actions");
                 ImGui::Checkbox("Flick Back Macro", &BooleanFlags["Flick Back Macro"]);
                 FlickBackMacroBind.Update();
@@ -173,19 +208,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             }
         }
 
+#ifdef _DEBUG
+        const auto t7 = std::chrono::high_resolution_clock::now();
+#endif
+
         {
             constexpr int WindowWidth = 310;
             constexpr int NonTextElements = 0;
             constexpr int IgnoreTitleBar = false;
             // e.g. a line of text, then another line of text, and another line of text, followed by 2 lines of text
             constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1, 1, 1, 2});
-            if (SetNextWindowSize(
+
+            static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
                 WindowWidth,
                 NonTextElements,
                 IgnoreTitleBar,
                 TextElementsInfo
-            )&& ImGui::Begin("Information", nullptr, WindowFlags)) {
+            );
+
+            if (SetNextWindowSize(WindowSize) && ImGui::Begin("Information", nullptr, WindowFlags)) {
                 ImGui::PushTextWrapPos();
                 ImGui::TextColored(ImVec4(1, 0.2, 0.2, 1), "INSERT KEY TO OPEN/CLOSE!");
                 ImGui::Text("Thanks to TASability for inspiration!");
@@ -196,30 +238,44 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             }
         }
 
+#ifdef _DEBUG
+        const auto t8 = std::chrono::high_resolution_clock::now();
+#endif
+
         {
             constexpr int WindowWidth = 144;
             constexpr int NonTextElements = 1;
             constexpr int IgnoreTitleBar = true;
-            if (SetNextWindowSize(
+
+            static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
                 WindowWidth,
                 NonTextElements,
                 IgnoreTitleBar
-            )&& ImGui::Begin("## Close Application Window", nullptr, WindowFlags | ImGuiWindowFlags_NoTitleBar)) {
+            );
+
+            if (SetNextWindowSize(WindowSize) && ImGui::Begin("## Close Application Window", nullptr, WindowFlags | ImGuiWindowFlags_NoTitleBar)) {
                 if (ImGui::Button("Close Application")) PostQuitMessage(0);
                 ImGui::SetItemTooltip("Closes the application.");
                 ImGui::End();
             }
         }
 
+#ifdef _DEBUG
+        const auto t9 = std::chrono::high_resolution_clock::now();
+#endif
+
         {
             constexpr int WindowWidth = 250;
             constexpr int NonTextElements = 4;
-            if (SetNextWindowSize(
+
+            static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
                 WindowWidth,
                 NonTextElements
-            )&& ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
+            );
+
+            if (SetNextWindowSize(WindowSize) && ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
                 constexpr int AddSubtractIntSliderButtonWidth = 46;
                 const int FramePaddingTotal = Style.FramePadding.x * 2;
 
@@ -256,12 +312,41 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             }
         }
 
+#ifdef _DEBUG
+        const auto t10 = std::chrono::high_resolution_clock::now();
+#endif
+
         ImGui::Render();
+
+#ifdef _DEBUG
+        const auto t11 = std::chrono::high_resolution_clock::now();
+#endif
+
         constexpr float ClearColor[4] = { 0.00f, 0.00f, 0.00f, 0.00f };
         DirectX::g_pd3dDeviceContext->OMSetRenderTargets(1, &DirectX::g_mainRenderTargetView, NULL);
         DirectX::g_pd3dDeviceContext->ClearRenderTargetView(DirectX::g_mainRenderTargetView, ClearColor);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-        DirectX::g_pSwapChain->Present(1, 0);
+
+#ifdef _DEBUG
+        const auto t12 = std::chrono::high_resolution_clock::now();
+#endif
+
+        DirectX::g_pSwapChain->Present(0, 0);
+
+#ifdef _DEBUG
+        std::cout << "Messages: " << std::chrono::duration<float, std::milli>(t2 - t1).count() << "ms" << std::endl
+                  << "Gui Close Handler: " << std::chrono::duration<float, std::milli>(t3 - t2).count() << "ms" << std::endl
+                  << "RenderStepped Handler: " << std::chrono::duration<float, std::milli>(t4 - t3).count() << "ms" << std::endl
+                  << "NewFrame: " << std::chrono::duration<float, std::milli>(t5 - t4).count() << "ms" << std::endl
+                  << "GetStyle: " << std::chrono::duration<float, std::milli>(t6 - t5).count() << "ms" << std::endl
+                  << "Window 1: " << std::chrono::duration<float, std::milli>(t7 - t6).count() << "ms" << std::endl
+                  << "Window 2: " << std::chrono::duration<float, std::milli>(t8 - t7).count() << "ms" << std::endl
+                  << "Window 3: " << std::chrono::duration<float, std::milli>(t9 - t8).count() << "ms" << std::endl
+                  << "Window 4: " << std::chrono::duration<float, std::milli>(t10 - t9).count() << "ms" << std::endl
+                  << "ImGui::Render(): " << std::chrono::duration<float, std::milli>(t11 - t10).count() << "ms" << std::endl
+                  << "RenderTargets: " << std::chrono::duration<float, std::milli>(t12 - t11).count() << "ms" << std::endl
+                  << "VSync: " << std::chrono::duration<float, std::milli>(std::chrono::high_resolution_clock::now() - t12).count() << "ms" << std::endl;
+#endif
     }
 
     if (Globals::g_hHook) {
@@ -272,8 +357,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    CleanupDeviceD3D();
     Shell_NotifyIcon(NIM_DELETE, &NotifyIconData);
+
+    while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    CleanupDeviceD3D();
     UnregisterClass(wc.lpszClassName, wc.hInstance);
 
     return 0;
