@@ -82,22 +82,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
 
-    MultiSliderCallbackImGuiBind FlickBackMacroBind([](const int Value) {
-        if (BooleanFlags["Flick Back Macro"]) MouseFlick(Value);
-    }, 90, -360, 360, "%d°");
-
-    MultiSliderCallbackImGuiBind SnapFlickMacroBind([](const int Value) {
-        if (BooleanFlags["Snap Flick Macro"]) MouseFlick(Value, true);
-    }, 90, -360, 360, "%d°");
-
-    MultiSliderCallbackImGuiBind SpamFlickMacroBind([](const int Value) {
-        if (BooleanFlags["Spam Flick Macro"]) MouseFlick(Value);
-        Wait(1.0 / 60.0);
-    }, 90, -360, 360, "%d°", BindMode::Hold);
-
     {
-        IntSliderFlags["Flick Angle"] = 90;
+        BooleanFlags["Flick Back Macro"] = false;
+        BooleanFlags["Human-like Flick"] = false;
+        BooleanFlags["Snap Back Macro"] = false;
+        BooleanFlags["Spam Back Macro"] = false;
+
         FloatSliderFlags["Flick Sensitivity"] = 1.0f;
+
         IntSliderFlags["Flick Delay"] = 60;
         IntSliderFlags["Flick Duration"] = 60;
     }
@@ -197,13 +189,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             );
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Input Macros", nullptr, WindowFlags)) {
+                static bool* const FlickBackMacro = &BooleanFlags["Flick Back Macro"];
+                static bool* const SnapBackMacro = &BooleanFlags["Snap Back Macro"];
+                static bool* const SpamBackMacro = &BooleanFlags["Spam Back Macro"];
+
+                static MultiSliderCallbackImGuiBind FlickBackMacroBind([](const int Value) {
+                    if (BooleanFlags["Flick Back Macro"]) MouseFlick(Value);
+                }, 90, -360, 360, "%d°");
+
+                static MultiSliderCallbackImGuiBind SnapFlickMacroBind([](const int Value) {
+                    if (BooleanFlags["Snap Flick Macro"]) MouseFlick(Value, true);
+                }, 90, -360, 360, "%d°");
+
+                static MultiSliderCallbackImGuiBind SpamFlickMacroBind([](const int Value) {
+                    if (BooleanFlags["Spam Flick Macro"]) MouseFlick(Value);
+                    Wait(1.0 / 60.0);
+                }, 90, -360, 360, "%d°", BindMode::Hold);
+
                 ImGui::Text("Mouse Actions");
-                ImGui::Checkbox("Flick Back Macro", &BooleanFlags["Flick Back Macro"]);
-                FlickBackMacroBind.Update();
-                ImGui::Checkbox("Snap Flick Macro", &BooleanFlags["Snap Flick Macro"]);
-                SnapFlickMacroBind.Update();
-                ImGui::Checkbox("Spam Flick Macro", &BooleanFlags["Spam Flick Macro"]);
-                SpamFlickMacroBind.Update();
+                ImGui::Checkbox("Flick Back Macro", FlickBackMacro); FlickBackMacroBind.Update();
+                ImGui::Checkbox("Snap Flick Macro", SnapBackMacro); SnapFlickMacroBind.Update();
+                ImGui::Checkbox("Spam Flick Macro", SpamBackMacro); SpamFlickMacroBind.Update();
                 ImGui::End();
             }
         }
@@ -217,7 +223,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             constexpr int NonTextElements = 0;
             constexpr int IgnoreTitleBar = false;
             // e.g. a line of text, then another line of text, and another line of text, followed by 2 lines of text
-            constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1, 1, 1, 2});
+            constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1, 1, 1, 2, 1});
 
             static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
@@ -233,6 +239,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 ImGui::Text("Thanks to TASability for inspiration!");
                 ImGui::Text("Created by Anbubu (@anbubu on discord)");
                 ImGui::TextColored(ImVec4(1, 0.3, 0.3, 1), "Make sure this program is acceptable for use on whatever game you're playing");
+                ImGui::Text("The app is in the hidden icon tray.");
                 ImGui::PopTextWrapPos();
                 ImGui::End();
             }
@@ -277,34 +284,50 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
                 constexpr int AddSubtractIntSliderButtonWidth = 46;
-                const int FramePaddingTotal = Style.FramePadding.x * 2;
 
-                const float RegionWidth = ImGui::GetContentRegionAvail().x;
-                const float FinalRegionWidth = RegionWidth - Style.ItemInnerSpacing.x;
+                static const float RegionWidth = ImGui::GetContentRegionAvail().x;
+                static const float FinalRegionWidth = RegionWidth - Style.ItemInnerSpacing.x;
+                
+                {
+                    constexpr const char* ElementName = "Human-like Flick";
 
-                ImGui::Checkbox("Human-like Flick", &BooleanFlags["Human-like Flick"]);
+                    static bool* const HumanLikeFlick = &BooleanFlags[ElementName];
+                    ImGui::Checkbox(ElementName, HumanLikeFlick);
+                }
 
                 {
-                    FloatSliderFlags["Flick Sensitivity"] = std::clamp(FloatSliderFlags["Flick Sensitivity"], 0.0f, 10.0f);
+                    constexpr const char* ElementName = "Flick Sensitivity";
 
-                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize("Flick Sensitivity").x);
-                    ImGui::SliderFloat("Flick Sensitivity", &FloatSliderFlags["Flick Sensitivity"], 0.0f, 10.0f, "%.2f");
+                    static float* const FlickSensitivity = &FloatSliderFlags[ElementName];
+                    *FlickSensitivity = std::clamp(*FlickSensitivity, 0.0f, 10.0f);
+
+                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    ImGui::SetNextItemWidth(ItemWidth);
+                    ImGui::SliderFloat(ElementName, FlickSensitivity, 0.0f, 10.0f, "%.2f");
                     ImGui::SetItemTooltip("Set this slider to your in-game roblox sensitivity.");
                 }
 
                 {
-                    IntSliderFlags["Flick Delay"] = std::clamp(IntSliderFlags["Flick Delay"], 1, 240);
+                    constexpr const char* ElementName = "Flick Delay";
 
-                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize("Flick Delay").x);
-                    ImGui::SliderInt("Flick Delay", &IntSliderFlags["Flick Delay"], 1, 240, "1 / %ds");
+                    static int* const FlickDelay = &IntSliderFlags[ElementName];
+                    *FlickDelay = std::clamp(*FlickDelay, 1, 240);
+
+                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    ImGui::SetNextItemWidth(ItemWidth);
+                    ImGui::SliderInt(ElementName, FlickDelay, 1, 240, "1 / %ds");
                     ImGui::SetItemTooltip("The delay in between flicking.");
                 }
 
                 {
-                    IntSliderFlags["Flick Duration"] = std::clamp(IntSliderFlags["Flick Duration"], 1, 240);
+                    constexpr const char* ElementName = "Flick Duration";
 
-                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize("Flick Duration").x);
-                    ImGui::SliderInt("Flick Duration", &IntSliderFlags["Flick Duration"], 1, 240, "1 / %ds");
+                    static int* const FlickDuration = &IntSliderFlags[ElementName];
+                    *FlickDuration = std::clamp(*FlickDuration, 1, 240);
+
+                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    ImGui::SetNextItemWidth(ItemWidth);
+                    ImGui::SliderInt(ElementName, FlickDuration, 1, 240, "1 / %ds");
                     ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flick\" is off.");
                 }
 
@@ -345,7 +368,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                   << "Window 4: " << std::chrono::duration<float, std::milli>(t10 - t9).count() << "ms" << std::endl
                   << "ImGui::Render(): " << std::chrono::duration<float, std::milli>(t11 - t10).count() << "ms" << std::endl
                   << "RenderTargets: " << std::chrono::duration<float, std::milli>(t12 - t11).count() << "ms" << std::endl
-                  << "VSync: " << std::chrono::duration<float, std::milli>(std::chrono::high_resolution_clock::now() - t12).count() << "ms" << std::endl;
+                  << "g_pSwapChain->Present(0, 0): " << std::chrono::duration<float, std::milli>(std::chrono::high_resolution_clock::now() - t12).count() << "ms" << std::endl;
 #endif
     }
 
