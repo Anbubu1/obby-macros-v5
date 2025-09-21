@@ -10,6 +10,7 @@
 
 namespace Globals {
     constexpr inline float ROBLOX_SENS_MULT = 2.75;
+    constexpr inline int OPEN_CLOSE_KEY = VK_INSERT;
     
     namespace MultiSliderCallbackImGuiBindSettings {
         constexpr inline int MAX_CALLBACK_BINDS = 10;

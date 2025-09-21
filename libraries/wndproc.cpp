@@ -18,11 +18,11 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
         KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
 
-        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
+        if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && p->vkCode != Globals::OPEN_CLOSE_KEY) {
             Binds::KeyPressed.fire(p->vkCode);
         }
 
-        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP && p->vkCode != Globals::OPEN_CLOSE_KEY) {
             Binds::KeyReleased.fire(p->vkCode);
         }
     }

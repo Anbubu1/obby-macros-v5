@@ -58,7 +58,7 @@ public:
     UINT VK = UNUSABLE_VK;
     UINT Id = 0;
 
-    BlankImGuiBind(UINT VK = UNUSABLE_VK, BindMode Mode = BindMode::Toggle) : Mode(Mode) {
+    BlankImGuiBind(const UINT VK = UNUSABLE_VK, const BindMode Mode = BindMode::Toggle) : Mode(Mode) {
         NextId += 1;
         this->Id = NextId;
         IdToBind[NextId] = this;
@@ -76,7 +76,7 @@ public:
 };
 
 inline bool UpdateKey(BlankImGuiBind* const Bind, const UINT VK) {
-    if (Binds::Binding == &Bind->Id) {
+    if (Binds::Binding == &Bind->Id && Globals::ImGuiShown) {
         SetBindKey(Bind, VK);
         Binds::Binding = nullptr;
         return true;
@@ -90,7 +90,7 @@ public:
     Connection<UINT> OnPressConnection;
     bool Flag = false;
 
-    ImGuiBind(UINT VK = UNUSABLE_VK, BindMode Mode = BindMode::Toggle)
+    ImGuiBind(const UINT VK = UNUSABLE_VK, const BindMode Mode = BindMode::Toggle)
     : BlankImGuiBind(VK, Mode) {
         Type = BindType::Normal;
         OnPressConnection = Binds::KeyPressed.connect([this](UINT VK_Key) {
@@ -140,9 +140,9 @@ public:
     std::function<void()> Callback;
 
     CallbackImGuiBind(
-        std::function<void()> cb,
-        BindMode BindMode = BindMode::None,
-        UINT VK = UNUSABLE_VK
+        const std::function<void()> cb,
+        const BindMode BindMode = BindMode::None,
+        const UINT VK = UNUSABLE_VK
     ) : BlankImGuiBind(VK, BindMode),
         Callback(cb) {
         Type = BindType::Callback;
@@ -199,13 +199,13 @@ public:
     bool Destroying = false;
 
     SliderCallbackImGuiBind(
-        std::function<void(int)> Callback,
+        const std::function<void(int)> Callback,
         const std::string Label = "",
         const int DefaultValue = 0,
         const int Min = 0,
         const int Max = 100,
         const std::string Format = "%d",
-        BindMode BindMode = BindMode::None
+        const BindMode BindMode = BindMode::None
     ) : BlankImGuiBind(UNUSABLE_VK, BindMode),
         Callback(Callback),
         Label(Label),
@@ -303,12 +303,12 @@ public:
     const std::string Format;
 
     MultiSliderCallbackImGuiBind(
-        std::function<void(int)> cb,
-        int DefaultValue = 0,
-        int Min = 0,
-        int Max = 100,
+        const std::function<void(int)> cb,
+        const int DefaultValue = 0,
+        const int Min = 0,
+        const int Max = 100,
         const std::string Format = "%d",
-        BindMode BindMode = BindMode::None
+        const BindMode BindMode = BindMode::None
     ) : BlankImGuiBind(UNUSABLE_VK, BindMode),
         Callback(cb),
         DefaultValue(DefaultValue),

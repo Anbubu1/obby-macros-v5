@@ -120,7 +120,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #endif
 
         // INSERT to close and open GUI
-        if (GetAsyncKeyState(VK_INSERT) & 1) {
+        if (GetAsyncKeyState(Globals::OPEN_CLOSE_KEY) & 1) {
             Globals::ImGuiShown = !Globals::ImGuiShown;
             ShowWindow(hwnd, Globals::ImGuiShown ? SW_SHOW : SW_HIDE);
         }
