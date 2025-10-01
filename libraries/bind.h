@@ -21,6 +21,8 @@ namespace Binds {
     inline UINT* OpenedMultiSliderWindow = nullptr;
     inline Signal<UINT> KeyPressed;
     inline Signal<UINT> KeyReleased;
+
+    inline UINT NextId = 1;
 };
 
 enum class BindMode {
@@ -43,7 +45,6 @@ class BlankImGuiBind;
 
 extern const char* DisplayMap[256];
 extern std::unordered_map<UINT, BlankImGuiBind*> IdToBind;
-extern UINT NextId;
 
 bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy = false);
 void SetBindKey(BlankImGuiBind* const Bind, const UINT VK);
@@ -56,12 +57,15 @@ public:
     std::string Display = "NONE";
     std::string Key = "NONE";
     UINT VK = UNUSABLE_VK;
-    UINT Id = 0;
+    UINT Id = 1;
 
-    BlankImGuiBind(const UINT VK = UNUSABLE_VK, const BindMode Mode = BindMode::Toggle) : Mode(Mode) {
-        NextId += 1;
-        this->Id = NextId;
-        IdToBind[NextId] = this;
+    BlankImGuiBind(
+        const UINT VK = UNUSABLE_VK,
+        const BindMode Mode = BindMode::Toggle
+    ) : Id(Binds::NextId),
+        Mode(Mode) {
+        Binds::NextId += 1;
+        IdToBind[Binds::NextId] = this;
 
         if (VK != UNUSABLE_VK) {
             SetBindKey(this, VK);
@@ -72,7 +76,7 @@ public:
         UpdateBind(this);
     }
     
-    virtual ~BlankImGuiBind() = default;
+    virtual ~BlankImGuiBind() noexcept = default;
 };
 
 inline bool UpdateKey(BlankImGuiBind* const Bind, const UINT VK) {
@@ -126,7 +130,7 @@ public:
         }
     }
 
-    ~ImGuiBind() override {
+    ~ImGuiBind() noexcept override {
         OnPressConnection.disconnect();
     }
 };
@@ -179,7 +183,7 @@ public:
         });
     }
 
-    ~CallbackImGuiBind() override {
+    ~CallbackImGuiBind() noexcept override {
         OnPressConnection.disconnect();
     }
 };
@@ -187,8 +191,7 @@ public:
 class SliderCallbackImGuiBind : public BlankImGuiBind {
 private:
     Connection<UINT> OnPressConnection;
-    std::string CachedLabel, CachedButtonLabel;
-    std::string Label, Format;
+    std::string Label, Format, ButtonLabel;
     float SemiFinalWidth;
     bool Holding = false;
     bool Cached = false;
@@ -208,7 +211,8 @@ public:
         const BindMode BindMode = BindMode::None
     ) : BlankImGuiBind(UNUSABLE_VK, BindMode),
         Callback(Callback),
-        Label(Label),
+        Label(Label + "##" + std::to_string(Binds::NextId)),
+        ButtonLabel("-##" + std::to_string(Binds::NextId)),
         Value(DefaultValue),
         Min(Min),
         Max(Max),
@@ -249,20 +253,10 @@ public:
 
     void Update() override {
         using namespace std::string_literals;
-
-        if (!Cached) {
-            const std::string IdEnding = "## " + std::to_string(Id);
-
-            CachedButtonLabel = "-"s + IdEnding;
-        }
         
-        Destroying = ImGui::Button(CachedButtonLabel.c_str());
+        Destroying = ImGui::Button(ButtonLabel.c_str());
 
-        if (!Cached) {
-            const std::string IdEnding = "## " + std::to_string(Id);
-
-            CachedLabel = Label + IdEnding;
-            
+        if (!Cached) {            
             const float RegionWidth = ImGui::GetContentRegionAvail().x;
             const float LastElementWidth = ImGui::GetItemRectSize().x;
             
@@ -282,12 +276,12 @@ public:
 
         ImGui::SameLine();
         ImGui::SetNextItemWidth(SemiFinalWidth - DisplayWidth);
-        ImGui::SliderInt(CachedLabel.c_str(), &Value, Min, Max, Format.c_str());
+        ImGui::SliderInt(Label.c_str(), &Value, Min, Max, Format.c_str());
 
         UpdateBind(this, true);
     }
 
-    ~SliderCallbackImGuiBind() override {
+    ~SliderCallbackImGuiBind() noexcept override {
         OnPressConnection.disconnect();
     }
 };
@@ -336,14 +330,14 @@ public:
 
         Binds::OpenedMultiSliderWindow = &this->Id;
 
-        std::string Window = "## " + std::to_string(this->Id);
+        std::string Window = "##" + std::to_string(this->Id);
 
         ImGui::SetNextWindowPos(ImGui::GetItemRectMax());
 
         if (SetNextWindowSize(GetNextWindowSize(
             ImGui::GetStyle(),
             WINDOW_WIDTH,
-            std::clamp(static_cast<int>(CallbackBinds.size()) + 1, 1, 10),
+            std::clamp(static_cast<int>(CallbackBinds.size()) + 1, 1, MAX_CALLBACK_BINDS),
             true
         )) && ImGui::Begin(
             Window.c_str(),

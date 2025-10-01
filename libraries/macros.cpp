@@ -12,18 +12,24 @@ using Globals::BooleanFlags;
 using Globals::ROBLOX_SENS_MULT;
 
 void MouseFlick(const int Angle, const bool NoReverse) {
+    static std::atomic<float>* const FlickSensitivity = &FloatSliderFlags["Flick Sensitivity"];
+    static std::atomic<bool>* const HumanLikeFlick = &BooleanFlags["Human-like Flick"];
+    static std::atomic<int>* const FlickDuration = &IntSliderFlags["Flick Duration"];
+    static std::atomic<int>* const FlickDelay = &IntSliderFlags["Flick Delay"];
+
     INPUT Input = { 0 };
     Input.type = INPUT_MOUSE;
 
     MOUSEINPUT* const MouseInput = &Input.mi;
     MouseInput->dwFlags = MOUSEEVENTF_MOVE;
 
-    const double Delay = 1.0 / static_cast<double>(IntSliderFlags["Flick Delay"]);
+    const double Delay = 1.0 / static_cast<double>(FlickDelay->load());
     LONG PixelsTravelled = 0;
 
-    if (BooleanFlags["Human-like Flick"]) {
-        const LONG TotalPixels = Angle * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
-        const double Duration = 1.0 / static_cast<double>(IntSliderFlags["Flick Duration"]);
+    if (HumanLikeFlick->load()) {
+        const LONG TotalPixels = Angle * ROBLOX_SENS_MULT * FlickSensitivity->load();
+
+        const double Duration = 1.0 / static_cast<double>(FlickDuration->load());
 
         const auto DoPhase = [&](const bool Reversed) {
             LONG Moved = 0;
@@ -74,7 +80,7 @@ void MouseFlick(const int Angle, const bool NoReverse) {
         Wait(Delay);
         DoPhase(true);
     } else {
-        const LONG Pixels = Angle * ROBLOX_SENS_MULT * FloatSliderFlags["Flick Sensitivity"];
+        const LONG Pixels = Angle * ROBLOX_SENS_MULT * FlickSensitivity->load();
 
         MouseInput->dx = Pixels;
         SendInput(1, &Input, sizeof(INPUT));

@@ -13,14 +13,14 @@ namespace Globals {
     constexpr inline int OPEN_CLOSE_KEY = VK_INSERT;
     
     namespace MultiSliderCallbackImGuiBindSettings {
-        constexpr inline int MAX_CALLBACK_BINDS = 10;
+        constexpr inline int MAX_CALLBACK_BINDS = 5;
         constexpr inline int WINDOW_WIDTH = 175;
     }
 
     inline bool ImGuiShown = true;
-    inline std::unordered_map<std::string, bool> BooleanFlags = {};
-    inline std::unordered_map<std::string, int> IntSliderFlags = {};
-    inline std::unordered_map<std::string, float> FloatSliderFlags = {};
+    inline std::unordered_map<std::string, std::atomic<bool>> BooleanFlags = {};
+    inline std::unordered_map<std::string, std::atomic<int>> IntSliderFlags = {};
+    inline std::unordered_map<std::string, std::atomic<float>> FloatSliderFlags = {};
 
     inline Signal<const std::chrono::duration<float>> RenderStepped;
 

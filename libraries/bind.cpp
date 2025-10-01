@@ -2,7 +2,6 @@
 
 const char* DisplayMap[256] = { nullptr };
 std::unordered_map<UINT, BlankImGuiBind*> IdToBind = {};
-UINT NextId = 0;
 
 struct DisplayMapInitializer {
     DisplayMapInitializer() {
