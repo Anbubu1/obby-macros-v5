@@ -317,6 +317,7 @@ public:
 
     void Update() override {
         const bool Clicked = SetRightMostButton(this);
+        ImGui::SetItemTooltip("Click to open a menu of binds for this toggle.");
         if (Clicked) WindowToggle = !WindowToggle;
         if (!WindowToggle) return;
 
@@ -330,7 +331,7 @@ public:
 
         Binds::OpenedMultiSliderWindow = &this->Id;
 
-        std::string Window = "##" + std::to_string(this->Id);
+        std::string Window = "## MultiSliderCallbackImGuiBind " + std::to_string(this->Id);
 
         ImGui::SetNextWindowPos(ImGui::GetItemRectMax());
 

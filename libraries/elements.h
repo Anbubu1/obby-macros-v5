@@ -9,7 +9,7 @@
 #include <type_traits>
 
 namespace Elements {
-    inline UINT NextId = 1;
+    inline std::atomic<UINT> NextId = 1;
 }
 
 template <typename T>
@@ -19,7 +19,9 @@ concept BoolIntFloat =
     std::same_as<T, float>;
 
 template <typename T>
-concept IntOrFloat = std::same_as<T, int> || std::same_as<T, float>;
+concept IntFloat =
+    std::same_as<T, int> ||
+    std::same_as<T, float>;
 
 template <BoolIntFloat T>
 struct Element {
@@ -28,9 +30,11 @@ struct Element {
     UINT Id;
 
     Element(const std::string& Label)
-    : Label(Label + "##" + std::to_string(Elements::NextId)),
-      Id(Elements::NextId) {
-        Elements::NextId += 1;
+    : Label(Label + "##" + std::to_string(Elements::NextId.load())),
+      Id(Elements::NextId.load()) {
+        UINT NextIdValue = Elements::NextId.load();
+        NextIdValue += 1;
+        Elements::NextId.store(NextIdValue);
         
         if constexpr (std::is_same_v<T, bool>) {
             Flag = &Globals::BooleanFlags[Label];
@@ -53,20 +57,21 @@ struct Checkbox : Element<bool> {
 
     Checkbox(
         const std::string& Label,
+        const bool DefaultValue = false,
         std::unique_ptr<BlankImGuiBind> Bind = nullptr
     ) : Element<bool>(Label),
-        Bind(std::move(Bind)) {}
+        Bind(std::move(Bind)) {
+        Globals::BooleanFlags[Label].store(DefaultValue);
+    }
 
     void Update() override {
         bool Toggle = Flag->load();
         if (ImGui::Checkbox(Label.c_str(), &Toggle)) Flag->store(Toggle);
         if (Bind) Bind->Update();
     }
-
-    ~Checkbox() noexcept = default;
 };
 
-template <IntOrFloat T>
+template <IntFloat T>
 struct Slider : Element<T> {
     std::unique_ptr<BlankImGuiBind> Bind;
     const T Min, Max;
@@ -74,6 +79,7 @@ struct Slider : Element<T> {
 
     Slider(
         const std::string& Label,
+        const T DefaultValue = 0,
         const T Min = 0,
         const T Max = 100,
         const std::string Format = "",
@@ -82,7 +88,13 @@ struct Slider : Element<T> {
         Min(Min),
         Max(Max),
         Format(Format.empty() ? (std::is_same_v<T, int> ? "%d" : "%.2f") : Format),
-        Bind(std::move(Bind)) {}
+        Bind(std::move(Bind)) {
+        if constexpr (std::is_same_v<T, int>) {
+            Globals::IntSliderFlags[Label].store(DefaultValue);
+        } else if constexpr(std::is_same_v<T, float>) {
+            Globals::FloatSliderFlags[Label].store(DefaultValue);
+        }
+    }
 
     void Update() override {
         auto Value = this->Flag->load();
@@ -99,6 +111,4 @@ struct Slider : Element<T> {
         }
         if (Bind) Bind->Update();
     }
-
-    ~Slider() noexcept = default;
 };

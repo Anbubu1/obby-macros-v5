@@ -1,3 +1,5 @@
+#undef __RenderDebug
+
 #include <unordered_map>
 #include <algorithm>
 #include <iostream>
@@ -83,30 +85,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
 
-    {
-        BooleanFlags["Flick Back Macro"] = false;
-        BooleanFlags["Human-like Flick"] = false;
-        BooleanFlags["Snap Back Macro"] = false;
-        BooleanFlags["Spam Back Macro"] = false;
-
-        FloatSliderFlags["Flick Sensitivity"] = 1.0f;
-
-        IntSliderFlags["Flick Delay"] = 60;
-        IntSliderFlags["Flick Duration"] = 60;
-    }
-
     const ImVec2 ItemSpacing = ImGui::GetStyle().ItemSpacing;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ItemSpacing.x, ItemSpacing.x));
 
     auto Time = std::chrono::high_resolution_clock::now();
 
+#ifdef __RenderDebug
     Globals::RenderStepped.connect([](const auto Delta) {
         std::cerr << "Total Time Rendering: " << std::to_string(Delta.count() * 1000) << "ms" << std::endl;
     });
+#endif
 
     while (msg.message != WM_QUIT) {
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t1 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -116,7 +108,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             continue;
         }
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t2 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -126,7 +118,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             ShowWindow(hwnd, Globals::ImGuiShown ? SW_SHOW : SW_HIDE);
         }
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t3 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -135,16 +127,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         Globals::RenderStepped.fire(Now - Time);
         Time = Now;
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t4 = std::chrono::high_resolution_clock::now();
 #endif
 
         if (!Globals::ImGuiShown) {
             DirectX::g_pSwapChain->Present(1, 0);
 
+#ifdef __RenderDebug
             std::cout << "Messages: " << std::chrono::duration<float, std::milli>(t2-t1).count() << "ms, "
                       << "Gui Close Handler: " << std::chrono::duration<float, std::milli>(t3-t2).count() << "ms, "
                       << "RenderStepped Handler: " << std::chrono::duration<float, std::milli>(t4-t3).count() << "ms, ";
+#endif
 
             continue;
         }
@@ -163,13 +157,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t5 = std::chrono::high_resolution_clock::now();
 #endif
 
         const ImGuiStyle Style = ImGui::GetStyle();
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t6 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -194,7 +188,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
                 {
                     constexpr const char* ElementName = "Flick Back Macro";
-                    static Checkbox Checkbox(ElementName, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
+                    static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
                         static std::atomic<bool>* const Flag = &BooleanFlags[ElementName];
                         if (Flag->load()) MouseFlick(Value);
                     }, 90, -360, 360, "%d°"));
@@ -203,7 +197,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
                 {
                     constexpr const char* ElementName = "Flick Macro";
-                    static Checkbox Checkbox(ElementName, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
+                    static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
                         static std::atomic<bool>* const Flag = &BooleanFlags[ElementName];
                         if (Flag->load()) MouseFlick(Value, true);
                     }, 90, -360, 360, "%d°"));
@@ -212,7 +206,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
                 {
                     constexpr const char* ElementName = "Spam Flick Macro";
-                    static Checkbox Checkbox(ElementName, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
+                    static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
                         static std::atomic<bool>* const Flag = &BooleanFlags[ElementName];
                         if (Flag->load()) MouseFlick(Value);
                         Wait(1.0 / 60.0);
@@ -224,7 +218,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             }
         }
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t7 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -255,7 +249,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             }
         }
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t8 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -278,7 +272,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             }
         }
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t9 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -293,54 +287,55 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             );
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
-                constexpr int AddSubtractIntSliderButtonWidth = 46;
-
                 static const float RegionWidth = ImGui::GetContentRegionAvail().x;
                 static const float FinalRegionWidth = RegionWidth - Style.ItemInnerSpacing.x;
                 
                 {
-                    static Checkbox Checkbox("Human-like Flick");
+                    static Checkbox Checkbox("Human-like Flicking");
                     Checkbox.Update();
                 }
 
                 {
                     constexpr const char* ElementName = "Flick Sensitivity";
-                    static Slider<float> Slider(ElementName, 0.0f, 10.0f, "%.2f");
+                    static Slider<float> Slider(ElementName, 1.0f, 0.0f, 10.0f, "%.2f");
 
-                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize(ElementName).x);
+                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    ImGui::SetNextItemWidth(ItemWidth);
                     Slider.Update();
                     ImGui::SetItemTooltip("Set this slider to your in-game roblox sensitivity.");
                 }
 
                 {
                     constexpr const char* ElementName = "Flick Delay";
-                    static Slider<int> Slider(ElementName, 1, 240, "1 / %ds");
+                    static Slider<int> Slider(ElementName, 60, 1, 240, "1 / %ds");
 
-                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize(ElementName).x);
+                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    ImGui::SetNextItemWidth(ItemWidth);
                     Slider.Update();
                     ImGui::SetItemTooltip("The delay in between flicking.");
                 }
 
                 {
                     constexpr const char* ElementName = "Flick Duration";
-                    static Slider<int> Slider(ElementName, 1, 240, "1 / %ds");
+                    static Slider<int> Slider(ElementName, 60, 1, 240, "1 / %ds");
 
-                    ImGui::SetNextItemWidth(FinalRegionWidth - ImGui::CalcTextSize(ElementName).x);
+                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    ImGui::SetNextItemWidth(ItemWidth);
                     Slider.Update();
-                    ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flick\" is off.");
+                    ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flicking\" is off.");
                 }
 
                 ImGui::End();
             }
         }
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t10 = std::chrono::high_resolution_clock::now();
 #endif
 
         ImGui::Render();
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t11 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -349,13 +344,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         DirectX::g_pd3dDeviceContext->ClearRenderTargetView(DirectX::g_mainRenderTargetView, ClearColor);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t12 = std::chrono::high_resolution_clock::now();
 #endif
 
         DirectX::g_pSwapChain->Present(0, 0);
 
-#ifdef _DEBUG
+#ifdef __RenderDebug
         const auto t13 = std::chrono::high_resolution_clock::now();
         std::cout << "Messages: "                    << std::chrono::duration<float, std::milli>(t2 - t1).count()   << "ms" << std::endl
                   << "Gui Close Handler: "           << std::chrono::duration<float, std::milli>(t3 - t2).count()   << "ms" << std::endl

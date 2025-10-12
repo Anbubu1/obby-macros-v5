@@ -1,5 +1,8 @@
+#define __MacroDebug
+
 #include <algorithm>
 #include <windows.h>
+#include <iostream>
 
 #include <globals.h>
 #include <macros.h>
@@ -11,9 +14,9 @@ using Globals::BooleanFlags;
 
 using Globals::ROBLOX_SENS_MULT;
 
-void MouseFlick(const int Angle, const bool NoReverse) {
+void MouseFlick(const int Angle, const bool NoReturn) {
     static std::atomic<float>* const FlickSensitivity = &FloatSliderFlags["Flick Sensitivity"];
-    static std::atomic<bool>* const HumanLikeFlick = &BooleanFlags["Human-like Flick"];
+    static std::atomic<bool>* const HumanLikeFlick = &BooleanFlags["Human-like Flicking"];
     static std::atomic<int>* const FlickDuration = &IntSliderFlags["Flick Duration"];
     static std::atomic<int>* const FlickDelay = &IntSliderFlags["Flick Delay"];
 
@@ -24,7 +27,10 @@ void MouseFlick(const int Angle, const bool NoReverse) {
     MouseInput->dwFlags = MOUSEEVENTF_MOVE;
 
     const double Delay = 1.0 / static_cast<double>(FlickDelay->load());
+
+#ifdef __MacroDebug
     LONG PixelsTravelled = 0;
+#endif
 
     if (HumanLikeFlick->load()) {
         const LONG TotalPixels = Angle * ROBLOX_SENS_MULT * FlickSensitivity->load();
@@ -40,7 +46,9 @@ void MouseFlick(const int Angle, const bool NoReverse) {
                 LONG rem = TotalPixels;
                 MouseInput->dx = Reversed ? -rem : rem;
                 SendInput(1, &Input, sizeof(INPUT));
+#ifdef __MacroDebug
                 PixelsTravelled += rem;
+#endif
                 return;
             }
 
@@ -58,7 +66,9 @@ void MouseFlick(const int Angle, const bool NoReverse) {
                     MouseInput->dx = Reversed ? -DeltaPixels : DeltaPixels;
                     SendInput(1, &Input, sizeof(INPUT));
                     Moved += DeltaPixels;
+#ifdef __MacroDebug
                     PixelsTravelled += DeltaPixels;
+#endif
                 }
 
                 if (t >= 1.0 && Moved < TotalPixels) {
@@ -67,15 +77,21 @@ void MouseFlick(const int Angle, const bool NoReverse) {
                         MouseInput->dx = Reversed ? -rem : rem;
                         SendInput(1, &Input, sizeof(INPUT));
                         Moved += rem;
+#ifdef __MacroDebug
                         PixelsTravelled += rem;
+#endif
                     }
                     break;
                 }
             }
+
+#ifdef __MacroDebug
+            std::cout << std::to_string(PixelsTravelled) << std::endl;
+#endif
         };
 
         DoPhase(false);
-        if (NoReverse) return;
+        if (NoReturn) return;
 
         Wait(Delay);
         DoPhase(true);
@@ -84,7 +100,7 @@ void MouseFlick(const int Angle, const bool NoReverse) {
 
         MouseInput->dx = Pixels;
         SendInput(1, &Input, sizeof(INPUT));
-        if (NoReverse) return;
+        if (NoReturn) return;
 
         Wait(Delay);
 

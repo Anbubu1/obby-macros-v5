@@ -67,17 +67,17 @@ void CleanupDeviceD3D() {
     CleanupRenderTarget();
     if (DirectX::g_pSwapChain) {
         DirectX::g_pSwapChain->Release();
-        DirectX::g_pSwapChain = NULL;
+        DirectX::g_pSwapChain = nullptr;
     }
     
     if (DirectX::g_pd3dDeviceContext) {
         DirectX::g_pd3dDeviceContext->Release();
-        DirectX::g_pd3dDeviceContext = NULL;
+        DirectX::g_pd3dDeviceContext = nullptr;
     }
 
     if (DirectX::g_pd3dDevice) {
         DirectX::g_pd3dDevice->Release();
-        DirectX::g_pd3dDevice = NULL;
+        DirectX::g_pd3dDevice = nullptr;
     }
 }
 
