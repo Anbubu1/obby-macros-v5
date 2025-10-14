@@ -1,11 +1,11 @@
-#include <wndproc.h>
+#include <wndproc.hpp>
 
-#include <imgui_lib.h>
-#include <globals.h>
-#include <tasks.h>
-#include <bind.h>
+#include <imgui_lib.hpp>
+#include <globals.hpp>
+#include <tasks.hpp>
+#include <bind.hpp>
 
-#include "imgui.h"
+#include <imgui.h>
 
 #include <iostream>
 #include <tchar.h>
@@ -14,7 +14,7 @@
 #include <windows.h>
 #include <iostream>
 
-LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK KeyboardProc(const int nCode, const WPARAM wParam, const LPARAM lParam) {
     if (nCode == HC_ACTION) {
         KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
 
@@ -31,7 +31,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT WINAPI WndProc(const HWND hWnd, const UINT msg, const WPARAM wParam, const LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return 1;
 

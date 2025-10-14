@@ -1,24 +1,28 @@
 #undef __RenderDebug
 
 #include <unordered_map>
+#include <filesystem>
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 #include <chrono>
+#include <format>
 
-#include "imgui_lib.h"
-#include "elements.h"
-#include "general.h"
-#include "globals.h"
-#include "wndproc.h"
-#include "macros.h"
-#include "tasks.h"
-#include "bind.h"
-#include "init.h"
+#include <conversion.hpp>
+#include <imgui_lib.hpp>
+#include <elements.hpp>
+#include <general.hpp>
+#include <globals.hpp>
+#include <wndproc.hpp>
+#include <macros.hpp>
+#include <tasks.hpp>
+#include <bind.hpp>
+#include <init.hpp>
 
 #include <tchar.h>
 
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx11.h"
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx11.h>
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -28,6 +32,41 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     using Globals::FloatSliderFlags;
     using Globals::IntSliderFlags;
     using Globals::BooleanFlags;
+
+    { // Create Configuration Folder
+        namespace filesystem = std::filesystem;
+
+        wchar_t buffer[MAX_PATH];
+        if (GetEnvironmentVariableW(L"LOCALAPPDATA", buffer, MAX_PATH) == 0)
+            throw std::runtime_error("Failed to get \%localappdata\%!");
+
+        Globals::ConfigPath = filesystem::path(buffer) / "Obby-Macros" / "configs" / "default.json";
+
+        if (!filesystem::exists(Globals::ConfigPath)
+         && !filesystem::create_directories(Globals::ConfigPath.parent_path()))
+            throw std::runtime_error("Failed to create ./config directory!");
+
+        if (!filesystem::exists(Globals::ConfigPath)) {
+            std::ofstream File(Globals::ConfigPath);
+            if (!File)
+                throw std::runtime_error("Failed to create default.json!");
+            File.close();
+        } else {
+            std::ifstream File(Globals::ConfigPath);
+            std::stringstream Buffer;
+            Buffer << File.rdbuf();
+            std::string Contents = Buffer.str();
+            if (Contents.empty())
+                Globals::JSONConfig = Globals::GetDefaultConfig();
+            else {
+                Globals::JSONConfig = nlohmann::json::parse(Contents);
+                const std::string JSONDump = Globals::JSONConfig.dump(4);
+                std::printf(JSONDump.c_str());
+                if (!Globals::JSONConfig.contains("BooleanFlags"))
+                    Globals::JSONConfig = Globals::GetDefaultConfig();
+            }
+        }
+    }
 
     WNDCLASSEX wc = InitialiseWindow(hInstance);
     RegisterClassEx(&wc);
@@ -366,6 +405,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                   << "g_pSwapChain->Present(0, 0): " << std::chrono::duration<float, std::milli>(t13 - t12).count() << "ms" << std::endl;
 #endif
     }
+
+    std::ofstream ConfigFile(Globals::ConfigPath);
+    const std::string JSONDump = Globals::JSONConfig.dump();
+    ConfigFile.write(JSONDump.c_str(), JSONDump.length());
+    ConfigFile.close();
 
     if (Globals::g_hHook) {
         UnhookWindowsHookEx(Globals::g_hHook);

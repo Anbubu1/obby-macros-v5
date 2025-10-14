@@ -1,7 +1,9 @@
-#include <imgui_lib.h>
+#include <imgui_lib.hpp>
 
-#include <wndproc.h>
-#include <globals.h>
+#include <windows.h>
+#include <imgui.h>
+
+#include <globals.hpp>
 
 bool CreateDeviceD3D(HWND hWnd) {
     namespace DirectX = Globals::DirectX;

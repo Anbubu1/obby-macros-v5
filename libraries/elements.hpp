@@ -2,8 +2,8 @@
 
 #include <imgui.h>
 
-#include <globals.h>
-#include <bind.h>
+#include <globals.hpp>
+#include <bind.hpp>
 
 #include <concepts>
 #include <type_traits>
@@ -61,7 +61,13 @@ struct Checkbox : Element<bool> {
         std::unique_ptr<BlankImGuiBind> Bind = nullptr
     ) : Element<bool>(Label),
         Bind(std::move(Bind)) {
-        Globals::BooleanFlags[Label].store(DefaultValue);
+        nlohmann::json& JSONBooleanFlags = Globals::JSONConfig["BooleanFlags"];
+        if (JSONBooleanFlags.contains(Label)) {
+            Globals::BooleanFlags[Label].store(JSONBooleanFlags[Label]);
+        } else {
+            JSONBooleanFlags[Label] = DefaultValue;
+            Globals::BooleanFlags[Label].store(DefaultValue);
+        }
     }
 
     void Update() override {
@@ -90,9 +96,21 @@ struct Slider : Element<T> {
         Format(Format.empty() ? (std::is_same_v<T, int> ? "%d" : "%.2f") : Format),
         Bind(std::move(Bind)) {
         if constexpr (std::is_same_v<T, int>) {
-            Globals::IntSliderFlags[Label].store(DefaultValue);
+            nlohmann::json& JSONIntSliderFlags = Globals::JSONConfig["IntSliderFlags"];
+            if (JSONIntSliderFlags.contains(Label)) {
+                Globals::IntSliderFlags[Label].store(JSONIntSliderFlags[Label]);
+            } else {
+                JSONIntSliderFlags[Label] = DefaultValue;
+                Globals::IntSliderFlags[Label].store(DefaultValue);
+            }
         } else if constexpr(std::is_same_v<T, float>) {
-            Globals::FloatSliderFlags[Label].store(DefaultValue);
+            nlohmann::json& JSONFloatSliderFlags = Globals::JSONConfig["FloatSliderFlags"];
+            if (JSONFloatSliderFlags.contains(Label)) {
+                Globals::FloatSliderFlags[Label].store(JSONFloatSliderFlags[Label]);
+            } else {
+                JSONFloatSliderFlags[Label] = DefaultValue;
+                Globals::FloatSliderFlags[Label].store(DefaultValue);
+            }
         }
     }
 

@@ -8,12 +8,12 @@
 #include <thread>
 #include <mutex>
 
-#include "signals.h"
-#include "general.h"
-#include "imgui.h"
+#include <general.hpp>
+#include <signals.hpp>
+#include <imgui.h>
 
-#include <imgui_lib.h>
-#include <globals.h>
+#include <imgui_lib.hpp>
+#include <globals.hpp>
 #include <windows.h>
 
 namespace Binds {

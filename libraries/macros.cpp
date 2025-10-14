@@ -4,9 +4,9 @@
 #include <windows.h>
 #include <iostream>
 
-#include <globals.h>
-#include <macros.h>
-#include <tasks.h>
+#include <globals.hpp>
+#include <macros.hpp>
+#include <tasks.hpp>
 
 using Globals::FloatSliderFlags;
 using Globals::IntSliderFlags;

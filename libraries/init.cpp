@@ -1,6 +1,6 @@
-#include <init.h>
+#include <init.hpp>
 
-#include <wndproc.h>
+#include <wndproc.hpp>
 
 #include "imgui.h"
 #include <windows.h>
