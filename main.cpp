@@ -61,7 +61,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             else {
                 Globals::JSONConfig = nlohmann::json::parse(Contents);
                 const std::string JSONDump = Globals::JSONConfig.dump(4);
-                std::printf(JSONDump.c_str());
                 if (!Globals::JSONConfig.contains("BooleanFlags"))
                     Globals::JSONConfig = Globals::GetDefaultConfig();
             }
@@ -404,6 +403,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                   << "RenderTargets: "               << std::chrono::duration<float, std::milli>(t12 - t11).count() << "ms" << std::endl
                   << "g_pSwapChain->Present(0, 0): " << std::chrono::duration<float, std::milli>(t13 - t12).count() << "ms" << std::endl;
 #endif
+    }
+
+    for (const auto& pair : Globals::BooleanFlags) {
+        static nlohmann::json& BooleanFlags = Globals::JSONConfig["BooleanFlags"];
+        BooleanFlags[pair.first] = pair.second.load();
+    }
+
+    for (const auto& pair : Globals::IntSliderFlags) {
+        static nlohmann::json& IntSliderFlags = Globals::JSONConfig["IntSliderFlags"];
+        IntSliderFlags[pair.first] = pair.second.load();
+    }
+
+    for (const auto& pair : Globals::FloatSliderFlags) {
+        static nlohmann::json& FloatSliderFlags = Globals::JSONConfig["FloatSliderFlags"];
+        FloatSliderFlags[pair.first] = pair.second.load();
     }
 
     std::ofstream ConfigFile(Globals::ConfigPath);
