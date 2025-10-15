@@ -42,7 +42,10 @@ inline bool DownloadFile(const std::wstring& Url, const std::wstring& OutputPath
 
 inline std::vector<std::string> ListJsonFiles(const std::wstring& directory) {
     std::vector<std::string> Results;
-    std::wstring SearchPattern = directory + L"*.json";
+    std::wstring SearchPattern = directory;
+    if (!SearchPattern.empty() && SearchPattern.back() != L'\\' && SearchPattern.back() != L'/')
+        SearchPattern += L'\\';
+    SearchPattern += L"*.json";
     WIN32_FIND_DATAW FindData;
     HANDLE hFind = FindFirstFileW(SearchPattern.c_str(), &FindData);
 
@@ -54,6 +57,8 @@ inline std::vector<std::string> ListJsonFiles(const std::wstring& directory) {
                 CP_UTF8, 0, FindData.cFileName, -1,
                 nullptr, 0, nullptr, nullptr
             );
+
+            if (Length <= 1) continue;
             
             std::string filename(Length - 1, 0);
             WideCharToMultiByte(CP_UTF8, 0, FindData.cFileName, -1, filename.data(), Length, nullptr, nullptr);

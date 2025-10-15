@@ -51,6 +51,8 @@ namespace Globals {
     
     inline nlohmann::json MainJsonConfig = Globals::GetDefaultMainConfig();
     inline nlohmann::json JsonConfig = Globals::GetDefaultConfig();
+
+    inline const std::string DefaultConfigString = JsonConfig.dump();
     
     namespace MultiSliderCallbackImGuiBindSettings {
         constexpr inline int MAX_CALLBACK_BINDS = 5;

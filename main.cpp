@@ -1,12 +1,13 @@
+#include "imgui.h"
 #undef __RenderDebug
 
 #include <windows_lib.hpp>
 #include <conversion.hpp>
 #include <imgui_lib.hpp>
 #include <elements.hpp>
-#include <json_lib.hpp>
 #include <general.hpp>
 #include <globals.hpp>
+#include <config.hpp>
 #include <macros.hpp>
 #include <tasks.hpp>
 #include <bind.hpp>
@@ -46,7 +47,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
         Globals::ConfigPath = Globals::ConfigFolderPath / Globals::MainJsonConfig["ConfigUsed"];
 
-        if (WriteIfJsonNoExist(
+        if (!WriteIfJsonNoExist(
             Globals::ConfigPath,
             Globals::JsonConfig.dump(),
             std::format("Failed to create {}!", Globals::CurrentConfigName)
@@ -312,7 +313,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
                 static const float RegionWidth = ImGui::GetContentRegionAvail().x;
-                static const float FinalRegionWidth = RegionWidth - Style.ItemInnerSpacing.x;
+                static const float RegionWidthNoInner = RegionWidth - Style.ItemInnerSpacing.x;
                 
                 {
                     static Checkbox Checkbox("Human-like Flicking");
@@ -323,7 +324,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     constexpr const char* ElementName = "Flick Sensitivity";
                     static Slider<float> Slider(ElementName, 1.0f, 0.0f, 10.0f, "%.2f");
 
-                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
                     ImGui::SetNextItemWidth(ItemWidth);
                     Slider.Update();
                     ImGui::SetItemTooltip("Set this slider to your in-game roblox sensitivity.");
@@ -333,7 +334,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     constexpr const char* ElementName = "Flick Delay";
                     static Slider<int> Slider(ElementName, 60, 1, 240, "1 / %ds");
 
-                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
                     ImGui::SetNextItemWidth(ItemWidth);
                     Slider.Update();
                     ImGui::SetItemTooltip("The delay in between flicking.");
@@ -343,25 +344,97 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     constexpr const char* ElementName = "Flick Duration";
                     static Slider<int> Slider(ElementName, 60, 1, 240, "1 / %ds");
 
-                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
                     ImGui::SetNextItemWidth(ItemWidth);
                     Slider.Update();
                     ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flicking\" is off.");
                 }
 
-                {
-                    constexpr const char* ElementName = "Config";
+                ImGui::End();
+            }
+        }
 
-                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
-                    ImGui::SetNextItemWidth(ItemWidth);
+        {
+            constexpr int WindowWidth = 250;
+            constexpr int NonTextElements = 5;
+            constexpr bool NoTitleBarHeight = false;
+            const std::array<int, 2> TextElementsInfo = {0, 0};
+            constexpr int Separators = 1;
+
+            static const ImVec2 WindowSize = GetNextWindowSize(
+                Style,
+                WindowWidth,
+                NonTextElements,
+                NoTitleBarHeight,
+                TextElementsInfo,
+                Separators
+            );
+
+            if (SetNextWindowSize(WindowSize) && ImGui::Begin("Configs", nullptr, WindowFlags)) {
+                static const float RegionWidth = ImGui::GetContentRegionAvail().x;
+                static const float RegionWidthNoInner = RegionWidth - Style.ItemInnerSpacing.x;
+
+                static const ImVec2 ButtonHalfRegionWidth = ImVec2((RegionWidth - Style.ItemSpacing.x) / 2, 0.0f);
+                static const ImVec2 ButtonRegionWidth = ImVec2(RegionWidth, 0.0f);
+
+                {
+                    constexpr const char* ElementName = "Selected Config";
+
+                    static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
                     
-                    if (ComboFromStringVector(ElementName, &Globals::CurrentConfigName, &Globals::JsonConfigPaths)) {
-                        Globals::ConfigPath = Globals::ConfigFolderPath / Globals::CurrentConfigName;
-                        ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
-                        LoadConfig();
+                    ImGui::SetNextItemWidth(ItemWidth);
+                    ComboFromStringVector(ElementName, &Globals::CurrentConfigName, &Globals::JsonConfigPaths);
+
+                    ImGui::SetItemTooltip("The selected configuration file.");
+
+                    {
+                        constexpr const char* ElementName = "Load Config";
+                        if (ImGui::Button(ElementName, ButtonHalfRegionWidth)) {
+                            Globals::ConfigPath = Globals::ConfigFolderPath / Globals::CurrentConfigName;
+                            ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
+                            LoadConfig();
+                        }
                     }
 
-                    ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flicking\" is off.");
+                    {
+                        constexpr const char* ElementName = "Remove Config";
+
+                        ImGui::SameLine();
+                        if (ImGui::Button(ElementName, ButtonHalfRegionWidth) && !RemoveConfig()) {
+                            ImGui::OpenPopup("Info");
+                            if (ImGui::BeginPopupModal("Info", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                                ImGui::Text("The default config cannot be destroyed!");
+                                ImGui::Separator();
+                                if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+                                ImGui::EndPopup();
+                            }
+                        }
+                    }
+
+                    {
+                        constexpr const char* ElementName = "Save Config";
+                        if (ImGui::Button(ElementName, ButtonRegionWidth))
+                            SaveConfig();
+                    }
+                }
+
+                ImGui::Separator();
+
+                {
+                    static char ConfigName[128] = "";
+
+                    static const float ItemWidth = RegionWidth;
+                    ImGui::SetNextItemWidth(ItemWidth);
+                    ImGui::InputText("## Config Name", ConfigName, IM_ARRAYSIZE(ConfigName));
+
+                    {
+                        constexpr const char* ElementName = "Create Config";
+
+                        if (ImGui::Button(ElementName, ButtonRegionWidth) && strlen(ConfigName) > 0) {
+                            CreateConfig(ConfigName);
+                            ConfigName[0] = '\0';
+                        }
+                    }
                 }
 
                 ImGui::End();
@@ -406,25 +479,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #endif
     }
 
-    for (const auto& pair : Globals::BooleanFlags) {
-        static nlohmann::json& BooleanFlags = Globals::JsonConfig["BooleanFlags"];
-        BooleanFlags[pair.first] = pair.second.load();
-    }
-
-    for (const auto& pair : Globals::IntSliderFlags) {
-        static nlohmann::json& IntSliderFlags = Globals::JsonConfig["IntSliderFlags"];
-        IntSliderFlags[pair.first] = pair.second.load();
-    }
-
-    for (const auto& pair : Globals::FloatSliderFlags) {
-        static nlohmann::json& FloatSliderFlags = Globals::JsonConfig["FloatSliderFlags"];
-        FloatSliderFlags[pair.first] = pair.second.load();
-    }
-
-    std::ofstream ConfigFile(Globals::ConfigPath);
-    const std::string JSONDump = Globals::JsonConfig.dump();
-    ConfigFile.write(JSONDump.c_str(), JSONDump.length());
-    ConfigFile.close();
+    SaveConfig();
 
     if (Globals::g_hHook) UnhookWindowsHookEx(Globals::g_hHook);
 

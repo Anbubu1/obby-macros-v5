@@ -93,10 +93,10 @@ struct Slider : Element<T> {
         Bind(std::move(Bind)) {
         if constexpr (std::is_same_v<T, int>) {
             nlohmann::json& JsonIntSliderFlags = Globals::JsonConfig["IntSliderFlags"];
-            Globals::BooleanFlags[Label].store(JsonIndexDefault(JsonIntSliderFlags, Label, DefaultValue));
+            Globals::IntSliderFlags[Label].store(JsonIndexDefault(JsonIntSliderFlags, Label, DefaultValue));
         } else if constexpr(std::is_same_v<T, float>) {
             nlohmann::json& JsonFloatSliderFlags = Globals::JsonConfig["FloatSliderFlags"];
-            Globals::BooleanFlags[Label].store(JsonIndexDefault(JsonFloatSliderFlags, Label, DefaultValue));
+            Globals::FloatSliderFlags[Label].store(JsonIndexDefault(JsonFloatSliderFlags, Label, DefaultValue));
         }
     }
 

@@ -49,7 +49,7 @@ inline bool IsKeyHeld(const int VK) {
 }
 
 template <typename T>
-inline T& JsonIndexDefault(nlohmann::json& Json, const std::string& Key, const T& DefaultValue) {
+inline T JsonIndexDefault(nlohmann::json& Json, const std::string& Key, const T& DefaultValue) {
     if (!Json.contains(Key)) {
         Json[Key] = DefaultValue;
         return DefaultValue;

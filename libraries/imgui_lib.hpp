@@ -24,22 +24,24 @@ consteval std::array<int, 2> GetTextElementsInfo(const std::array<int, N>& Array
 
 inline ImVec2 GetNextWindowSize(
     const ImGuiStyle& Style = ImGui::GetStyle(),
-    int FixedWidth = 100,
-    int VerticalElements = 0,
-    bool NoTitleBarHeight = false,
-    std::array<int, 2> TextElementsInfo = {}
+    const int FixedWidth = 250,
+    const int VerticalElements = 0,
+    const bool NoTitleBarHeight = false,
+    const std::array<int, 2> TextElementsInfo = {0, 0},
+    const int Separators = 0
 ) {
-    const float FrameHeight = ImGui::GetFrameHeight();
-    const float TitleBarHeight = NoTitleBarHeight ? 0 : ImGui::GetFontSize() + Style.FramePadding.y * 2.0f;
-    const float ItemSpacing = Style.ItemSpacing.y;
-    const float TextLineHeight = ImGui::GetTextLineHeight();
-    const float WindowPadding = Style.WindowPadding.y;
+    static const float TextLineHeight = ImGui::GetTextLineHeight();
+    static const float FrameHeight = ImGui::GetFrameHeight();
+
+    static const float WindowPadding = Style.WindowPadding.y;
+    static const float ItemSpacing = Style.ItemSpacing.y;
+
+    const float TitleBarHeight = (ImGui::GetFontSize() + Style.FramePadding.y * 2.0f) * !NoTitleBarHeight;
 
     const int LineWraps = TextElementsInfo[0];
     const int TextElements = TextElementsInfo[1];
 
-    int MinusOne = VerticalElements - 1;
-    if (MinusOne < 0) MinusOne = 0;
+    int MinusOne = (VerticalElements - 1) & -(VerticalElements > 0);
 
     return ImVec2(
         FixedWidth,
@@ -47,7 +49,7 @@ inline ImVec2 GetNextWindowSize(
       + ItemSpacing * (VerticalElements - 1)
       + TitleBarHeight
       + FrameHeight * VerticalElements
-      + TextElements * ItemSpacing
+      + (TextElements + Separators) * ItemSpacing
       + LineWraps * TextLineHeight
     );
 };
@@ -58,7 +60,7 @@ inline bool SetNextWindowSize(const ImVec2 WindowSize) {
 };
 
 inline bool ComboFromStringVector(const char* Label, std::string* CurrentItem, const std::vector<std::string>* Items) {
-    if (!CurrentItem || !Items || Items->empty()) return false;
+    if (!CurrentItem || !Items) return false;
 
     int CurrentIndex = 0;
     for (int i = 0; i < (int)Items->size(); ++i) {
