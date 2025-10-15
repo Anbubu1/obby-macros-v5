@@ -1,4 +1,4 @@
-#include <wndproc.hpp>
+#include <windows_lib.hpp>
 
 #include <imgui_lib.hpp>
 #include <globals.hpp>
@@ -7,12 +7,9 @@
 
 #include <imgui.h>
 
-#include <iostream>
 #include <tchar.h>
-#include <thread>
 
 #include <windows.h>
-#include <iostream>
 
 LRESULT CALLBACK KeyboardProc(const int nCode, const WPARAM wParam, const LPARAM lParam) {
     if (nCode == HC_ACTION) {

@@ -1,10 +1,11 @@
 #pragma once
 
 #include <windows.h>
-#include <algorithm>
-#include <iostream>
-#include <cstring>
-#include <cctype>
+#include <fstream>
+
+#include <json.hpp>
+
+#include <string>
 
 constexpr std::string ToUpper(std::string_view StringView) {
     std::string Result;
@@ -45,4 +46,40 @@ inline std::string ToUpperWin(const std::string& Input) {
 
 inline bool IsKeyHeld(const int VK) {
     return (GetAsyncKeyState(VK) & 0x8000) != 0;
+}
+
+template <typename T>
+inline T& JsonIndexDefault(nlohmann::json& Json, const std::string& Key, const T& DefaultValue) {
+    if (!Json.contains(Key)) {
+        Json[Key] = DefaultValue;
+        return DefaultValue;
+    }
+
+    try {
+        return Json.at(Key).get<T>();
+    } catch (const nlohmann::json::type_error&) {
+        return DefaultValue;
+    }
+}
+
+inline void ReadJson(const std::filesystem::path Path, nlohmann::json* Value) {
+    std::ifstream File(Path);
+    std::stringstream Buffer;
+    Buffer << File.rdbuf();
+    std::string Contents = Buffer.str();
+    if (!Contents.empty())
+        *Value = nlohmann::json::parse(Contents);
+}
+
+inline bool WriteIfJsonNoExist(const std::filesystem::path Path, const std::string Value, const std::string Error) {
+    if (!std::filesystem::exists(Path)) {
+        std::ofstream File(Path);
+        if (!File)
+            throw std::runtime_error(Error);
+        File << Value;
+        File.close();
+        return true;
+    }
+
+    return false;
 }

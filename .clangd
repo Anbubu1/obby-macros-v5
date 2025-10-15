@@ -1,0 +1,15 @@
+CompileFlags:
+  CompilationDatabase: build
+  Add:
+    - --target=x86_64-pc-windows-msvc
+    - -std=c++23
+
+Index:
+  Background: Build
+
+Diagnostics:
+  Suppress:
+    - "-Wunused-parameter"
+
+InlayHints:
+  Enabled: false

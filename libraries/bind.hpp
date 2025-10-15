@@ -2,11 +2,9 @@
 
 #include <unordered_map>
 #include <functional>
-#include <iostream>
 #include <chrono>
 #include <string>
 #include <thread>
-#include <mutex>
 
 #include <general.hpp>
 #include <signals.hpp>

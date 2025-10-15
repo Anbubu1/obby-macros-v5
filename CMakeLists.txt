@@ -27,7 +27,7 @@ set(IMGUI_SOURCES
 
 set(LIBRARIES_SOURCES
     ${LIBRARIES_DIR}/imgui_lib.cpp
-    ${LIBRARIES_DIR}/wndproc.cpp
+    ${LIBRARIES_DIR}/windows_lib.cpp
     ${LIBRARIES_DIR}/macros.cpp
     ${LIBRARIES_DIR}/tasks.cpp
     ${LIBRARIES_DIR}/bind.cpp

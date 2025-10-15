@@ -1,8 +1,7 @@
 #include <init.hpp>
 
-#include <wndproc.hpp>
+#include <windows_lib.hpp>
 
-#include "imgui.h"
 #include <windows.h>
 #include <tchar.h>
 

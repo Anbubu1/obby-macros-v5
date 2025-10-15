@@ -1,9 +1,8 @@
 #pragma once
 
-#include <algorithm>
 #include <windows.h>
-#include <iostream>
 #include <string>
+#include <vector>
 #include <array>
 
 #include <imgui.h>
@@ -57,3 +56,27 @@ inline bool SetNextWindowSize(const ImVec2 WindowSize) {
     ImGui::SetNextWindowSize(WindowSize);
     return true;
 };
+
+inline bool ComboFromStringVector(const char* Label, std::string* CurrentItem, const std::vector<std::string>* Items) {
+    if (!CurrentItem || !Items || Items->empty()) return false;
+
+    int CurrentIndex = 0;
+    for (int i = 0; i < (int)Items->size(); ++i) {
+        if ((*Items)[i] == *CurrentItem) {
+            CurrentIndex = i;
+            break;
+        }
+    }
+
+    bool Changed = ImGui::Combo(Label, &CurrentIndex, [](void* Data, const int Index, const char** Output) {
+        auto& Vector = *static_cast<const std::vector<std::string>*>(Data);
+        if (Index < 0 || Index >= (int)Vector.size()) return false;
+        *Output = Vector[Index].c_str();
+        return true;
+    }, (void*)Items, (int)Items->size());
+
+    if (Changed && CurrentIndex >= 0 && CurrentIndex < (int)Items->size())
+        *CurrentItem = (*Items)[CurrentIndex];
+
+    return Changed;
+}

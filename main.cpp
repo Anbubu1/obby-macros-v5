@@ -1,19 +1,12 @@
 #undef __RenderDebug
 
-#include <unordered_map>
-#include <filesystem>
-#include <algorithm>
-#include <iostream>
-#include <fstream>
-#include <chrono>
-#include <format>
-
+#include <windows_lib.hpp>
 #include <conversion.hpp>
 #include <imgui_lib.hpp>
 #include <elements.hpp>
+#include <json_lib.hpp>
 #include <general.hpp>
 #include <globals.hpp>
-#include <wndproc.hpp>
 #include <macros.hpp>
 #include <tasks.hpp>
 #include <bind.hpp>
@@ -33,42 +26,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     using Globals::IntSliderFlags;
     using Globals::BooleanFlags;
 
-    { // Create Configuration Folder
-        namespace filesystem = std::filesystem;
+    { // Setting %localappdata%/Obby-Macros
+        using namespace std;
 
-        wchar_t buffer[MAX_PATH];
-        if (GetEnvironmentVariableW(L"LOCALAPPDATA", buffer, MAX_PATH) == 0)
-            throw std::runtime_error("Failed to get \%localappdata\%!");
+        if (!filesystem::exists(Globals::MainFolderPath)
+         && !filesystem::create_directories(Globals::MainFolderPath))
+            throw runtime_error("Failed to create the main directory!");
 
-        Globals::ConfigPath = filesystem::path(buffer) / "Obby-Macros" / "configs" / "default.json";
+        if (!filesystem::exists(Globals::ConfigFolderPath)
+         && !filesystem::create_directories(Globals::ConfigFolderPath))
+            throw runtime_error("Failed to create the config folder!");
 
-        if (!filesystem::exists(Globals::ConfigPath)
-         && !filesystem::create_directories(Globals::ConfigPath.parent_path()))
-            throw std::runtime_error("Failed to create ./config directory!");
+        if (!WriteIfJsonNoExist(
+            Globals::MainConfigPath,
+            Globals::MainJsonConfig.dump(),
+            std::format("Failed to create {}!", Globals::MAIN_CONFIG_NAME)
+        ))
+            ReadJson(Globals::MainConfigPath, &Globals::MainJsonConfig);
 
-        if (!filesystem::exists(Globals::ConfigPath)) {
-            std::ofstream File(Globals::ConfigPath);
-            if (!File)
-                throw std::runtime_error("Failed to create default.json!");
-            File.close();
-        } else {
-            std::ifstream File(Globals::ConfigPath);
-            std::stringstream Buffer;
-            Buffer << File.rdbuf();
-            std::string Contents = Buffer.str();
-            if (Contents.empty())
-                Globals::JSONConfig = Globals::GetDefaultConfig();
-            else {
-                Globals::JSONConfig = nlohmann::json::parse(Contents);
-                const std::string JSONDump = Globals::JSONConfig.dump(4);
-                if (!Globals::JSONConfig.contains("BooleanFlags"))
-                    Globals::JSONConfig = Globals::GetDefaultConfig();
-            }
-        }
+        Globals::ConfigPath = Globals::ConfigFolderPath / Globals::MainJsonConfig["ConfigUsed"];
+
+        if (WriteIfJsonNoExist(
+            Globals::ConfigPath,
+            Globals::JsonConfig.dump(),
+            std::format("Failed to create {}!", Globals::CurrentConfigName)
+        ))
+            ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
     }
 
-    WNDCLASSEX wc = InitialiseWindow(hInstance);
-    RegisterClassEx(&wc);
+    WNDCLASSEX WndClass = InitialiseWindow(hInstance);
+    RegisterClassEx(&WndClass);
 
     Globals::g_hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, GetModuleHandle(NULL), 0);
     if (!Globals::g_hHook) {
@@ -78,26 +65,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     const int nWidth = GetSystemMetrics(SM_CXSCREEN);
     const int nHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    const HWND hwnd = CreateWindowEx(
+    Globals::MainWindow = CreateWindowEx(
         WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
-        wc.lpszClassName,
+        WndClass.lpszClassName,
         _T("Dear ImGui Win32 + DirectX11 Example"),
         WS_POPUP,
         0, 0, nWidth, nHeight,
-        NULL, NULL, wc.hInstance, NULL
+        NULL, NULL, WndClass.hInstance, NULL
     );
 
-    Globals::MainWindow = hwnd;
-    EnableBlur(hwnd);
+    EnableBlur(Globals::MainWindow);
 
-    if (!CreateDeviceD3D(hwnd)) {
+    if (!CreateDeviceD3D(Globals::MainWindow)) {
         CleanupDeviceD3D();
-        UnregisterClass(wc.lpszClassName, wc.hInstance);
+        UnregisterClass(WndClass.lpszClassName, WndClass.hInstance);
         return 1;
     }
 
     NotifyIconData.cbSize = sizeof(NotifyIconData);
-    NotifyIconData.hWnd = hwnd;
+    NotifyIconData.hWnd = Globals::MainWindow;
     NotifyIconData.uID = 1;
     NotifyIconData.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     NotifyIconData.uCallbackMessage = WM_APP + 1;
@@ -106,10 +92,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     Shell_NotifyIcon(NIM_ADD, &NotifyIconData);
 
-    SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
+    SetLayeredWindowAttributes(Globals::MainWindow, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
-    ShowWindow(hwnd, nCmdShow);
-    UpdateWindow(hwnd);
+    ShowWindow(Globals::MainWindow, nCmdShow);
+    UpdateWindow(Globals::MainWindow);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -117,11 +103,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     ImGui::StyleColorsDark();
 
-    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplWin32_Init(Globals::MainWindow);
     ImGui_ImplDX11_Init(DirectX::g_pd3dDevice, DirectX::g_pd3dDeviceContext);
 
-    MSG msg;
-    ZeroMemory(&msg, sizeof(msg));
+    MSG Message;
+    ZeroMemory(&Message, sizeof(Message));
 
     const ImVec2 ItemSpacing = ImGui::GetStyle().ItemSpacing;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ItemSpacing.x, ItemSpacing.x));
@@ -134,15 +120,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     });
 #endif
 
-    while (msg.message != WM_QUIT) {
+    while (Message.message != WM_QUIT) {
 
 #ifdef __RenderDebug
         const auto t1 = std::chrono::high_resolution_clock::now();
 #endif
 
-        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+        if (PeekMessage(&Message, NULL, 0U, 0U, PM_REMOVE)) {
+            TranslateMessage(&Message);
+            DispatchMessage(&Message);
             continue;
         }
 
@@ -153,7 +139,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         // INSERT to close and open GUI
         if (GetAsyncKeyState(Globals::OPEN_CLOSE_KEY) & 1) {
             Globals::ImGuiShown = !Globals::ImGuiShown;
-            ShowWindow(hwnd, Globals::ImGuiShown ? SW_SHOW : SW_HIDE);
+            ShowWindow(Globals::MainWindow, Globals::ImGuiShown ? SW_SHOW : SW_HIDE);
         }
 
 #ifdef __RenderDebug
@@ -363,6 +349,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flicking\" is off.");
                 }
 
+                {
+                    constexpr const char* ElementName = "Config";
+
+                    static const float ItemWidth = FinalRegionWidth - ImGui::CalcTextSize(ElementName).x;
+                    ImGui::SetNextItemWidth(ItemWidth);
+                    
+                    if (ComboFromStringVector(ElementName, &Globals::CurrentConfigName, &Globals::JsonConfigPaths)) {
+                        Globals::ConfigPath = Globals::ConfigFolderPath / Globals::CurrentConfigName;
+                        ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
+                        LoadConfig();
+                    }
+
+                    ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flicking\" is off.");
+                }
+
                 ImGui::End();
             }
         }
@@ -406,28 +407,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     }
 
     for (const auto& pair : Globals::BooleanFlags) {
-        static nlohmann::json& BooleanFlags = Globals::JSONConfig["BooleanFlags"];
+        static nlohmann::json& BooleanFlags = Globals::JsonConfig["BooleanFlags"];
         BooleanFlags[pair.first] = pair.second.load();
     }
 
     for (const auto& pair : Globals::IntSliderFlags) {
-        static nlohmann::json& IntSliderFlags = Globals::JSONConfig["IntSliderFlags"];
+        static nlohmann::json& IntSliderFlags = Globals::JsonConfig["IntSliderFlags"];
         IntSliderFlags[pair.first] = pair.second.load();
     }
 
     for (const auto& pair : Globals::FloatSliderFlags) {
-        static nlohmann::json& FloatSliderFlags = Globals::JSONConfig["FloatSliderFlags"];
+        static nlohmann::json& FloatSliderFlags = Globals::JsonConfig["FloatSliderFlags"];
         FloatSliderFlags[pair.first] = pair.second.load();
     }
 
     std::ofstream ConfigFile(Globals::ConfigPath);
-    const std::string JSONDump = Globals::JSONConfig.dump();
+    const std::string JSONDump = Globals::JsonConfig.dump();
     ConfigFile.write(JSONDump.c_str(), JSONDump.length());
     ConfigFile.close();
 
-    if (Globals::g_hHook) {
-        UnhookWindowsHookEx(Globals::g_hHook);
-    }
+    if (Globals::g_hHook) UnhookWindowsHookEx(Globals::g_hHook);
 
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -435,13 +434,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     Shell_NotifyIcon(NIM_DELETE, &NotifyIconData);
 
-    while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+    while (PeekMessage(&Message, nullptr, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&Message);
+        DispatchMessage(&Message);
     }
 
     CleanupDeviceD3D();
-    UnregisterClass(wc.lpszClassName, wc.hInstance);
+    UnregisterClass(WndClass.lpszClassName, WndClass.hInstance);
 
     return 0;
 }

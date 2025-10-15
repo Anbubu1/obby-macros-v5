@@ -1,19 +1,27 @@
 #pragma once
 
+#include <windows_lib.hpp>
 #include <signals.hpp>
 #include <json.hpp>
 
 #include <d3d11.h>
 
 #include <unordered_map>
+#include <filesystem>
 #include <windows.h>
-#include <fstream>
 #include <chrono>
 #include <string>
+#include <vector>
 
 namespace Globals {
     constexpr inline float ROBLOX_SENS_MULT = 2.75;
     constexpr inline int OPEN_CLOSE_KEY = VK_INSERT;
+    constexpr inline const char* FOLDER_NAME = "Obby-Macros";
+    constexpr inline const char* CONFIG_FOLDER_NAME = "config";
+    constexpr inline const char* DEFAULT_CONFIG_NAME = "default.json";
+    constexpr inline const char* MAIN_CONFIG_NAME = "main_config.json";
+
+    inline std::string CurrentConfigName = DEFAULT_CONFIG_NAME;
 
     inline nlohmann::json GetDefaultConfig() {
         return {
@@ -23,9 +31,26 @@ namespace Globals {
         };
     }
 
-    inline nlohmann::json JSONConfig = Globals::GetDefaultConfig();
+    inline nlohmann::json GetDefaultMainConfig() {
+        return {{"ConfigUsed", DEFAULT_CONFIG_NAME}};
+    }
 
-    inline std::filesystem::path ConfigPath;
+    inline std::filesystem::path MainFolderPath = []() {
+        wchar_t buffer[MAX_PATH];
+        if (GetEnvironmentVariableW(L"LOCALAPPDATA", buffer, MAX_PATH) == 0)
+            throw std::runtime_error("Failed to get \%localappdata\%!");
+
+        return std::filesystem::path(buffer) / FOLDER_NAME;
+    }();
+
+    inline const std::filesystem::path ConfigFolderPath = MainFolderPath / CONFIG_FOLDER_NAME;
+    inline const std::filesystem::path MainConfigPath = MainFolderPath / MAIN_CONFIG_NAME;
+    
+    inline std::vector<std::string> JsonConfigPaths = ListJsonFiles(ConfigFolderPath);
+    inline std::filesystem::path ConfigPath = ConfigFolderPath / CurrentConfigName;
+    
+    inline nlohmann::json MainJsonConfig = Globals::GetDefaultMainConfig();
+    inline nlohmann::json JsonConfig = Globals::GetDefaultConfig();
     
     namespace MultiSliderCallbackImGuiBindSettings {
         constexpr inline int MAX_CALLBACK_BINDS = 5;

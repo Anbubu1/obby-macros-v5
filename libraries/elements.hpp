@@ -2,11 +2,12 @@
 
 #include <imgui.h>
 
+#include <general.hpp>
 #include <globals.hpp>
 #include <bind.hpp>
 
-#include <concepts>
 #include <type_traits>
+#include <concepts>
 
 namespace Elements {
     inline std::atomic<UINT> NextId = 1;
@@ -61,13 +62,8 @@ struct Checkbox : Element<bool> {
         std::unique_ptr<BlankImGuiBind> Bind = nullptr
     ) : Element<bool>(Label),
         Bind(std::move(Bind)) {
-        nlohmann::json& JSONBooleanFlags = Globals::JSONConfig["BooleanFlags"];
-        if (JSONBooleanFlags.contains(Label)) {
-            Globals::BooleanFlags[Label].store(JSONBooleanFlags[Label]);
-        } else {
-            JSONBooleanFlags[Label] = DefaultValue;
-            Globals::BooleanFlags[Label].store(DefaultValue);
-        }
+        nlohmann::json& JsonBooleanFlags = Globals::JsonConfig["BooleanFlags"];
+        Globals::BooleanFlags[Label].store(JsonIndexDefault(JsonBooleanFlags, Label, DefaultValue));
     }
 
     void Update() override {
@@ -96,21 +92,11 @@ struct Slider : Element<T> {
         Format(Format.empty() ? (std::is_same_v<T, int> ? "%d" : "%.2f") : Format),
         Bind(std::move(Bind)) {
         if constexpr (std::is_same_v<T, int>) {
-            nlohmann::json& JSONIntSliderFlags = Globals::JSONConfig["IntSliderFlags"];
-            if (JSONIntSliderFlags.contains(Label)) {
-                Globals::IntSliderFlags[Label].store(JSONIntSliderFlags[Label]);
-            } else {
-                JSONIntSliderFlags[Label] = DefaultValue;
-                Globals::IntSliderFlags[Label].store(DefaultValue);
-            }
+            nlohmann::json& JsonIntSliderFlags = Globals::JsonConfig["IntSliderFlags"];
+            Globals::BooleanFlags[Label].store(JsonIndexDefault(JsonIntSliderFlags, Label, DefaultValue));
         } else if constexpr(std::is_same_v<T, float>) {
-            nlohmann::json& JSONFloatSliderFlags = Globals::JSONConfig["FloatSliderFlags"];
-            if (JSONFloatSliderFlags.contains(Label)) {
-                Globals::FloatSliderFlags[Label].store(JSONFloatSliderFlags[Label]);
-            } else {
-                JSONFloatSliderFlags[Label] = DefaultValue;
-                Globals::FloatSliderFlags[Label].store(DefaultValue);
-            }
+            nlohmann::json& JsonFloatSliderFlags = Globals::JsonConfig["FloatSliderFlags"];
+            Globals::BooleanFlags[Label].store(JsonIndexDefault(JsonFloatSliderFlags, Label, DefaultValue));
         }
     }
 
