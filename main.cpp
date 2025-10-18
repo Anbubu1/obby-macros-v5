@@ -1,4 +1,3 @@
-#include "imgui.h"
 #undef __RenderDebug
 
 #include <windows_lib.hpp>
@@ -15,6 +14,11 @@
 
 #include <tchar.h>
 
+#ifdef __RenderDebug
+    #include <iostream>
+#endif
+
+#include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 
@@ -354,6 +358,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             }
         }
 
+#ifdef __RenderDebug
+        const auto t10 = std::chrono::high_resolution_clock::now();
+#endif
+
         {
             constexpr int WindowWidth = 250;
             constexpr int NonTextElements = 5;
@@ -442,13 +450,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         }
 
 #ifdef __RenderDebug
-        const auto t10 = std::chrono::high_resolution_clock::now();
+        const auto t11 = std::chrono::high_resolution_clock::now();
 #endif
 
         ImGui::Render();
 
 #ifdef __RenderDebug
-        const auto t11 = std::chrono::high_resolution_clock::now();
+        const auto t12 = std::chrono::high_resolution_clock::now();
 #endif
 
         constexpr float ClearColor[4] = { 0.00f, 0.00f, 0.00f, 0.00f };
@@ -457,25 +465,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 #ifdef __RenderDebug
-        const auto t12 = std::chrono::high_resolution_clock::now();
+        const auto t13 = std::chrono::high_resolution_clock::now();
 #endif
 
         DirectX::g_pSwapChain->Present(0, 0);
 
 #ifdef __RenderDebug
-        const auto t13 = std::chrono::high_resolution_clock::now();
+        const auto t14 = std::chrono::high_resolution_clock::now();
         std::cout << "Messages: "                    << std::chrono::duration<float, std::milli>(t2 - t1).count()   << "ms" << std::endl
                   << "Gui Close Handler: "           << std::chrono::duration<float, std::milli>(t3 - t2).count()   << "ms" << std::endl
                   << "RenderStepped Handler: "       << std::chrono::duration<float, std::milli>(t4 - t3).count()   << "ms" << std::endl
                   << "NewFrame: "                    << std::chrono::duration<float, std::milli>(t5 - t4).count()   << "ms" << std::endl
                   << "GetStyle: "                    << std::chrono::duration<float, std::milli>(t6 - t5).count()   << "ms" << std::endl
-                  << "Window 1: "                    << std::chrono::duration<float, std::milli>(t7 - t6).count()   << "ms" << std::endl
-                  << "Window 2: "                    << std::chrono::duration<float, std::milli>(t8 - t7).count()   << "ms" << std::endl
-                  << "Window 3: "                    << std::chrono::duration<float, std::milli>(t9 - t8).count()   << "ms" << std::endl
-                  << "Window 4: "                    << std::chrono::duration<float, std::milli>(t10 - t9).count()  << "ms" << std::endl
-                  << "ImGui::Render(): "             << std::chrono::duration<float, std::milli>(t11 - t10).count() << "ms" << std::endl
-                  << "RenderTargets: "               << std::chrono::duration<float, std::milli>(t12 - t11).count() << "ms" << std::endl
-                  << "g_pSwapChain->Present(0, 0): " << std::chrono::duration<float, std::milli>(t13 - t12).count() << "ms" << std::endl;
+                  << "Macros Window: "               << std::chrono::duration<float, std::milli>(t7 - t6).count()   << "ms" << std::endl
+                  << "Information Window: "          << std::chrono::duration<float, std::milli>(t8 - t7).count()   << "ms" << std::endl
+                  << "Close Application Button: "    << std::chrono::duration<float, std::milli>(t9 - t8).count()   << "ms" << std::endl
+                  << "Global Settings Window: "      << std::chrono::duration<float, std::milli>(t10 - t9).count()  << "ms" << std::endl
+                  << "Config Window: "               << std::chrono::duration<float, std::milli>(t11 - t10).count() << "ms" << std::endl
+                  << "ImGui::Render(): "             << std::chrono::duration<float, std::milli>(t12 - t11).count() << "ms" << std::endl
+                  << "RenderTargets: "               << std::chrono::duration<float, std::milli>(t13 - t12).count() << "ms" << std::endl
+                  << "g_pSwapChain->Present(0, 0): " << std::chrono::duration<float, std::milli>(t14 - t13).count() << "ms" << std::endl;
 #endif
     }
 

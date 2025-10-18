@@ -1,8 +1,11 @@
-#define __MacroDebug
+#undef __MacroDebug
 
 #include <algorithm>
 #include <windows.h>
-#include <iostream>
+
+#ifdef __MacroDebug
+    #include <iostream>
+#endif
 
 #include <globals.hpp>
 #include <macros.hpp>
