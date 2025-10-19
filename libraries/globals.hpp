@@ -16,7 +16,7 @@
 namespace Globals {
     constexpr inline float ROBLOX_SENS_MULT = 2.75;
     constexpr inline int OPEN_CLOSE_KEY = VK_INSERT;
-    constexpr inline const char* FOLDER_NAME = "Obby-Macros";
+    constexpr inline const char* MAIN_FOLDER_NAME = "Obby-Macros";
     constexpr inline const char* CONFIG_FOLDER_NAME = "config";
     constexpr inline const char* DEFAULT_CONFIG_NAME = "default.json";
     constexpr inline const char* MAIN_CONFIG_NAME = "main_config.json";
@@ -40,7 +40,7 @@ namespace Globals {
         if (GetEnvironmentVariableW(L"LOCALAPPDATA", buffer, MAX_PATH) == 0)
             throw std::runtime_error("Failed to get \%localappdata\%!");
 
-        return std::filesystem::path(buffer) / FOLDER_NAME;
+        return std::filesystem::path(buffer) / MAIN_FOLDER_NAME;
     }();
 
     inline const std::filesystem::path ConfigFolderPath = MainFolderPath / CONFIG_FOLDER_NAME;

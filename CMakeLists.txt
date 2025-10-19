@@ -2,7 +2,7 @@ if(NOT CMAKE_CXX_COMPILER)
     set(CMAKE_CXX_COMPILER "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/bin/clang++.exe" CACHE FILEPATH "C++ compiler" FORCE)
 endif()
 
-set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Debug)
 
 cmake_minimum_required(VERSION 3.25)
 project(ImGuiDX11App LANGUAGES CXX)

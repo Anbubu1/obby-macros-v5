@@ -51,8 +51,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             Globals::ConfigPath,
             Globals::JsonConfig.dump(),
             std::format("Failed to create {}!", Globals::CurrentConfigName)
-        ))
+        )) {
             ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
+            Globals::JsonConfigPaths = ListJsonFiles(Globals::ConfigFolderPath);
+        }
     }
 
     WNDCLASSEX WndClass = InitialiseWindow(hInstance);
@@ -140,7 +142,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         // INSERT to close and open GUI
         if (GetAsyncKeyState(Globals::OPEN_CLOSE_KEY) & 1) {
             Globals::ImGuiShown = !Globals::ImGuiShown;
-            ShowWindow(Globals::MainWindow, Globals::ImGuiShown ? SW_SHOW : SW_HIDE);
+            ShowWindow(Globals::MainWindow, SW_HIDE + (Globals::ImGuiShown * (SW_SHOW - SW_HIDE)));
         }
 
 #ifdef __RenderDebug
@@ -385,7 +387,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     ImGui::SetNextItemWidth(ItemWidth);
                     ComboFromStringVector(ElementName, &Globals::CurrentConfigName, &Globals::JsonConfigPaths);
 
-                    ImGui::SetItemTooltip("The selected configuration file.");
+                    const std::string Tooltip = std::format(
+                        "Selected Config: \%localappdata\%\\{}\\{}\\{}",
+                        Globals::MAIN_FOLDER_NAME,
+                        Globals::CONFIG_FOLDER_NAME,
+                        Globals::CurrentConfigName
+                    );
+
+                    ImGui::SetItemTooltip("%s", Tooltip.c_str());
 
                     {
                         constexpr const char* ElementName = "Load Config";
@@ -413,8 +422,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
                     {
                         constexpr const char* ElementName = "Save Config";
-                        if (ImGui::Button(ElementName, ButtonRegionWidth))
+                        if (ImGui::Button(ElementName, ButtonHalfRegionWidth))
                             SaveConfig();
+                    }
+
+                    {
+                        constexpr const char* ElementName = "Open Config";
+
+                        ImGui::SameLine();
+                        if (ImGui::Button(ElementName, ButtonHalfRegionWidth)) {
+                            OpenParentDirectoryAndSelectFile(Globals::ConfigPath);
+                            Globals::ImGuiShown = false;
+                            ShowWindow(Globals::MainWindow, SW_HIDE);
+                        }
+                        ImGui::SetItemTooltip(
+                            "⚠️ Warning: The app will be hidden when you open the directory! Press INSERT to open it again."
+                        );
                     }
                 }
 
