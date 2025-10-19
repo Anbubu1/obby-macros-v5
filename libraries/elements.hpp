@@ -78,6 +78,8 @@ struct Slider : Element<T> {
     std::unique_ptr<BlankImGuiBind> Bind;
     const T Min, Max;
     const std::string Format;
+    const char* LabelCStr;
+    const char* FormatCStr;
 
     Slider(
         const std::string& Label,
@@ -91,28 +93,29 @@ struct Slider : Element<T> {
         Max(Max),
         Format(Format.empty() ? (std::is_same_v<T, int> ? "%d" : "%.2f") : Format),
         Bind(std::move(Bind)) {
-        if constexpr (std::is_same_v<T, int>) {
-            nlohmann::json& JsonIntSliderFlags = Globals::JsonConfig["IntSliderFlags"];
-            Globals::IntSliderFlags[Label].store(JsonIndexDefault(JsonIntSliderFlags, Label, DefaultValue));
-        } else if constexpr(std::is_same_v<T, float>) {
-            nlohmann::json& JsonFloatSliderFlags = Globals::JsonConfig["FloatSliderFlags"];
-            Globals::FloatSliderFlags[Label].store(JsonIndexDefault(JsonFloatSliderFlags, Label, DefaultValue));
-        }
+        LabelCStr = this->Label.c_str();
+        FormatCStr = this->Format.c_str();
+        nlohmann::json& JsonSliderFlags = Globals::JsonConfig[std::is_same_v<T, int> ? "IntSliderFlags" : "FloatSliderFlags"];
+        if constexpr (std::is_same_v<T, int>) 
+            Globals::IntSliderFlags[Label].store(JsonIndexDefault(JsonSliderFlags, Label, DefaultValue));
+        else if constexpr(std::is_same_v<T, float>) 
+            Globals::FloatSliderFlags[Label].store(JsonIndexDefault(JsonSliderFlags, Label, DefaultValue));
     }
 
     void Update() override {
-        auto Value = this->Flag->load();
-        if constexpr (std::is_same_v<T, int>) {
-            if (ImGui::SliderInt(this->Label.c_str(), &Value, Min, Max, this->Format.c_str())) {
-                Value = std::clamp(Value, Min, Max);
-                this->Flag->store(Value);
-            }
-        } else if constexpr (std::is_same_v<T, float>) {
-            if (ImGui::SliderFloat(this->Label.c_str(), &Value, Min, Max, this->Format.c_str())) {
-                Value = std::clamp(Value, Min, Max);
-                this->Flag->store(Value);
-            }
+        T Value = this->Flag->load();
+        bool Changed;
+        
+        if constexpr (std::is_same_v<T, int>)
+            Changed = ImGui::SliderInt(LabelCStr, &Value, Min, Max, FormatCStr);
+        else if constexpr (std::is_same_v<T, float>)
+            Changed = ImGui::SliderFloat(LabelCStr, &Value, Min, Max, FormatCStr);
+
+        if (Changed) {
+            Value = std::clamp(Value, Min, Max);
+            this->Flag->store(Value);
         }
+        
         if (Bind) Bind->Update();
     }
 };

@@ -5,7 +5,7 @@ CompileFlags:
     - -std=c++23
 
 Index:
-  Background: Build
+  Background: Skip
 
 Diagnostics:
   Suppress:
@@ -13,3 +13,6 @@ Diagnostics:
 
 InlayHints:
   Enabled: false
+
+Completion:
+  ArgumentLists: None

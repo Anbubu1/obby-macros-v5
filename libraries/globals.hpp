@@ -21,6 +21,8 @@ namespace Globals {
     constexpr inline const char* DEFAULT_CONFIG_NAME = "default.json";
     constexpr inline const char* MAIN_CONFIG_NAME = "main_config.json";
 
+    inline float __DebugRobloxSensitivityMultiplier = 1;
+
     inline std::string CurrentConfigName = DEFAULT_CONFIG_NAME;
 
     inline nlohmann::json GetDefaultConfig() {
