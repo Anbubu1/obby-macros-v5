@@ -31,7 +31,7 @@ inline std::string GetReadableKeyName(const UINT VK) {
     LONG lParam = ScanCode << 16;
 
     char Name[64];
-    if (GetKeyNameTextA(lParam, Name, sizeof(Name)) > 0) {
+    if (GetKeyNameTextA(lParam, Name, sizeof(Name)) > 0) { [[likely]]
         return std::string(Name);
     } else {
         return "Unknown"s;
@@ -50,7 +50,7 @@ inline bool IsKeyHeld(const int VK) {
 
 template <typename T>
 inline T JsonIndexDefault(nlohmann::json& Json, const std::string& Key, const T& DefaultValue) {
-    if (!Json.contains(Key)) {
+    if (!Json.contains(Key)) { [[unlikely]]
         Json[Key] = DefaultValue;
         return DefaultValue;
     }
@@ -67,14 +67,14 @@ inline void ReadJson(const std::filesystem::path Path, nlohmann::json* Value) {
     std::stringstream Buffer;
     Buffer << File.rdbuf();
     std::string Contents = Buffer.str();
-    if (!Contents.empty())
+    if (!Contents.empty()) [[unlikely]]
         *Value = nlohmann::json::parse(Contents);
 }
 
 inline bool WriteIfJsonNoExist(const std::filesystem::path Path, const std::string Value, const std::string Error) {
-    if (!std::filesystem::exists(Path)) {
+    if (!std::filesystem::exists(Path)) [[unlikely]] {
         std::ofstream File(Path);
-        if (!File)
+        if (!File) [[unlikely]]
             throw std::runtime_error(Error);
         File << Value;
         File.close();

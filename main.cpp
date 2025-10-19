@@ -35,11 +35,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         using namespace std;
 
         if (!filesystem::exists(Globals::MainFolderPath)
-         && !filesystem::create_directories(Globals::MainFolderPath))
+         && !filesystem::create_directories(Globals::MainFolderPath)) [[unlikely]]
             throw runtime_error("Failed to create the main directory!");
 
         if (!filesystem::exists(Globals::ConfigFolderPath)
-         && !filesystem::create_directories(Globals::ConfigFolderPath))
+         && !filesystem::create_directories(Globals::ConfigFolderPath)) [[unlikely]]
             throw runtime_error("Failed to create the config folder!");
 
         if (!WriteIfJsonNoExist(
@@ -63,7 +63,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     RegisterClassEx(&WndClass);
 
     Globals::g_hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, GetModuleHandle(NULL), 0);
-    if (!Globals::g_hHook) {
+    if (!Globals::g_hHook) { [[unlikely]]
         MessageBox(NULL, _T("Failed to install keyboard hook!"), _T("Error"), MB_ICONERROR);
     }
 
@@ -81,7 +81,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     EnableBlur(Globals::MainWindow);
 
-    if (!CreateDeviceD3D(Globals::MainWindow)) {
+    if (!CreateDeviceD3D(Globals::MainWindow)) { [[unlikely]]
         CleanupDeviceD3D();
         UnregisterClass(WndClass.lpszClassName, WndClass.hInstance);
         return 1;

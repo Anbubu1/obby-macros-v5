@@ -16,11 +16,10 @@ void SetImGuiScale(float scale);
 template<size_t N>
 consteval std::array<int, 2> GetTextElementsInfo(const std::array<int, N>& Array) {
     int Sum = 0;
-    for (size_t i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i)
         Sum += Array[i];
-    }
     return {Sum, static_cast<int>(N)};
-};
+}
 
 inline ImVec2 GetNextWindowSize(
     const ImGuiStyle& Style = ImGui::GetStyle(),
@@ -52,19 +51,19 @@ inline ImVec2 GetNextWindowSize(
       + (TextElements + Separators) * ItemSpacing
       + LineWraps * TextLineHeight
     );
-};
+}
 
 inline bool SetNextWindowSize(const ImVec2 WindowSize) {
     ImGui::SetNextWindowSize(WindowSize);
     return true;
-};
+}
 
 inline bool ComboFromStringVector(const char* Label, std::string* CurrentItem, const std::vector<std::string>* Items) {
-    if (!CurrentItem || !Items) return false;
+    if (!CurrentItem || !Items) [[unlikely]] return false;
 
     int CurrentIndex = 0;
     for (int i = 0; i < (int)Items->size(); ++i) {
-        if ((*Items)[i] == *CurrentItem) {
+        if ((*Items)[i] == *CurrentItem) [[likely]] {
             CurrentIndex = i;
             break;
         }
@@ -72,7 +71,10 @@ inline bool ComboFromStringVector(const char* Label, std::string* CurrentItem, c
 
     bool Changed = ImGui::Combo(Label, &CurrentIndex, [](void* Data, const int Index, const char** Output) {
         auto& Vector = *static_cast<const std::vector<std::string>*>(Data);
-        if (Index < 0 || Index >= (int)Vector.size()) return false;
+
+        if (Index < 0 || Index >= (int)Vector.size()) [[unlikely]]
+            return false;
+
         *Output = Vector[Index].c_str();
         return true;
     }, (void*)Items, (int)Items->size());
