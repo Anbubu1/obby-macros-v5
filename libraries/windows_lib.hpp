@@ -7,6 +7,10 @@
 #include <string>
 #include <vector>
 
+#include <shellapi.h>
+#include <shobjidl.h>
+#include <shlobj.h>
+
 LRESULT CALLBACK KeyboardProc(const int nCode, const WPARAM wParam, const LPARAM lParam);
 LRESULT WINAPI WndProc(const HWND hWnd, const UINT msg, const WPARAM wParam, const LPARAM lParam);
 
@@ -68,4 +72,13 @@ inline std::vector<std::string> ListJsonFiles(const std::wstring& directory) {
 
     FindClose(hFind);
     return Results;
+}
+
+inline bool OpenParentDirectoryAndSelectFile(const std::wstring& Path) {
+    PIDLIST_ABSOLUTE PidList = ILCreateFromPathW(Path.c_str());
+    if (!PidList) return false;
+
+    HRESULT hResult = SHOpenFolderAndSelectItems(PidList, 0, nullptr, 0);
+    ILFree(PidList);
+    return SUCCEEDED(hResult);
 }
