@@ -268,10 +268,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Information", nullptr, WindowFlags)) {
                 ImGui::PushTextWrapPos();
-                ImGui::TextColored(ImVec4(1, 0.2, 0.2, 1), "INSERT KEY TO OPEN/CLOSE!");
+                ImGui::TextColored(ImVec4(1, 0.2f, 0.2f, 1), "INSERT KEY TO OPEN/CLOSE!");
                 ImGui::Text("Thanks to TASability for inspiration!");
                 ImGui::Text("Created by Anbubu (@anbubu on discord)");
-                ImGui::TextColored(ImVec4(1, 0.3, 0.3, 1), "Make sure this program is acceptable for use on whatever game you're playing");
+                ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Make sure this program is acceptable for use on whatever game you're playing");
                 ImGui::Text("The app is in the hidden icon tray.");
                 ImGui::PopTextWrapPos();
                 ImGui::End();
@@ -394,54 +394,52 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     ComboFromStringVector(ElementName, &Globals::CurrentConfigName, &Globals::JsonConfigPaths);
 
                     ImGui::SetItemTooltip("The selected configuration file.");
+                }
 
-                    {
-                        constexpr const char* ElementName = "Load Config";
-                        if (ImGui::Button(ElementName, ButtonHalfRegionWidth)) {
-                            Globals::ConfigPath = Globals::ConfigFolderPath / Globals::CurrentConfigName;
-                            ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
-                            LoadConfig();
+                {
+                    constexpr const char* ElementName = "Load Config";
+                    if (ImGui::Button(ElementName, ButtonHalfRegionWidth)) {
+                        Globals::ConfigPath = Globals::ConfigFolderPath / Globals::CurrentConfigName;
+                        ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
+                        LoadConfig();
+                    }
+                }
+
+                {
+                    constexpr const char* ElementName = "Remove Config";
+
+                    ImGui::SameLine();
+                    if (ImGui::Button(ElementName, ButtonHalfRegionWidth) && !RemoveConfig()) {
+                        ImGui::OpenPopup("Info");
+                        if (ImGui::BeginPopupModal("Info", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                            ImGui::Text("The default config cannot be destroyed!");
+                            ImGui::Separator();
+                            if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+                            ImGui::EndPopup();
                         }
                     }
+                }
 
-                    {
-                        constexpr const char* ElementName = "Remove Config";
-
-                        ImGui::SameLine();
-                        if (ImGui::Button(ElementName, ButtonHalfRegionWidth) && !RemoveConfig()) {
-                            ImGui::OpenPopup("Info");
-                            if (ImGui::BeginPopupModal("Info", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-                                ImGui::Text("The default config cannot be destroyed!");
-                                ImGui::Separator();
-                                if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
-                                ImGui::EndPopup();
-                            }
-                        }
-                    }
-
-                    {
-                        constexpr const char* ElementName = "Save Config";
-                        if (ImGui::Button(ElementName, ButtonRegionWidth))
-                            SaveConfig();
-                    }
+                {
+                    constexpr const char* ElementName = "Save Config";
+                    if (ImGui::Button(ElementName, ButtonRegionWidth))
+                        SaveConfig();
                 }
 
                 ImGui::Separator();
 
                 {
+                    constexpr const char* ElementName = "Create Config";
+
                     static char ConfigName[128] = "";
 
                     static const float ItemWidth = RegionWidth;
                     ImGui::SetNextItemWidth(ItemWidth);
-                    ImGui::InputText("## Config Name", ConfigName, IM_ARRAYSIZE(ConfigName));
+                    ImGui::InputText("## Config Name", ConfigName, static_cast<int>(std::size(ConfigName)));
 
-                    {
-                        constexpr const char* ElementName = "Create Config";
-
-                        if (ImGui::Button(ElementName, ButtonRegionWidth) && strlen(ConfigName) > 0) {
-                            CreateConfig(ConfigName);
-                            ConfigName[0] = '\0';
-                        }
+                    if (ImGui::Button(ElementName, ButtonRegionWidth) && strlen(ConfigName) > 0) {
+                        CreateConfig(ConfigName);
+                        ConfigName[0] = '\0';
                     }
                 }
 
@@ -490,7 +488,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     SaveConfig();
 
-    if (Globals::g_hHook) UnhookWindowsHookEx(Globals::g_hHook);
+    if (Globals::g_hHook) [[likely]] UnhookWindowsHookEx(Globals::g_hHook);
 
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();

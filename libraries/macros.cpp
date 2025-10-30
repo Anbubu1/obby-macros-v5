@@ -23,7 +23,7 @@ void MouseFlick(const int Angle, const bool NoReturn) {
     static std::atomic<int>* const FlickDuration = &IntSliderFlags["Flick Duration"];
     static std::atomic<int>* const FlickDelay = &IntSliderFlags["Flick Delay"];
 
-    INPUT Input = { 0 };
+    INPUT Input{};
     Input.type = INPUT_MOUSE;
 
     MOUSEINPUT* const MouseInput = &Input.mi;
@@ -36,18 +36,18 @@ void MouseFlick(const int Angle, const bool NoReturn) {
 #endif
 
     if (HumanLikeFlick->load()) {
-        const LONG TotalPixels = Angle * ROBLOX_SENS_MULT * FlickSensitivity->load();
+        const float TotalPixels = static_cast<float>(Angle) * ROBLOX_SENS_MULT * FlickSensitivity->load();
 
-        const double Duration = 1.0 / static_cast<double>(FlickDuration->load());
+        const float Duration = 1.0f / static_cast<float>(FlickDuration->load());
 
         const auto DoPhase = [&](const bool Reversed) {
-            LONG Moved = 0;
-            double ElapsedTime = 0.0;
-            const double PhaseDuration = Duration / 2.0;
+            float Moved = 0.0f;
+            float ElapsedTime = 0.0f;
+            const float PhaseDuration = Duration / 2.0f;
 
             if (PhaseDuration <= 0.0) {
-                LONG rem = TotalPixels;
-                MouseInput->dx = Reversed ? -rem : rem;
+                float rem = TotalPixels;
+                MouseInput->dx = static_cast<long>(Reversed ? -rem : rem);
                 SendInput(1, &Input, sizeof(INPUT));
 #ifdef __MacroDebug
                 PixelsTravelled += rem;
@@ -58,15 +58,15 @@ void MouseFlick(const int Angle, const bool NoReturn) {
             while (Moved < TotalPixels) {
                 ElapsedTime += ShortWait();
 
-                double t = std::clamp(ElapsedTime / PhaseDuration, 0.0, 1.0);
+                const float t = std::clamp(ElapsedTime / PhaseDuration, 0.0f, 1.0f);
 
-                const double Smoothed = 1 - (1 - t) * (1 - t) * (1 - t);
+                const float Smoothed = 1 - (1 - t) * (1 - t) * (1 - t);
 
-                const LONG Target = static_cast<LONG>(std::round(Smoothed * static_cast<double>(TotalPixels)));
-                const LONG DeltaPixels = Target - Moved;
+                const float Target = static_cast<float>(std::round(Smoothed * static_cast<float>(TotalPixels)));
+                const float DeltaPixels = Target - Moved;
 
-                if (DeltaPixels > 0) {
-                    MouseInput->dx = Reversed ? -DeltaPixels : DeltaPixels;
+                if (DeltaPixels > 0.0f) {
+                    MouseInput->dx = static_cast<long>(Reversed ? -DeltaPixels : DeltaPixels);
                     SendInput(1, &Input, sizeof(INPUT));
                     Moved += DeltaPixels;
 #ifdef __MacroDebug
@@ -74,10 +74,10 @@ void MouseFlick(const int Angle, const bool NoReturn) {
 #endif
                 }
 
-                if (t >= 1.0 && Moved < TotalPixels) {
-                    const LONG rem = TotalPixels - Moved;
+                if (t >= 1.0f && Moved < TotalPixels) {
+                    const float rem = TotalPixels - Moved;
                     if (rem > 0) {
-                        MouseInput->dx = Reversed ? -rem : rem;
+                        MouseInput->dx = static_cast<long>(Reversed ? -rem : rem);
                         SendInput(1, &Input, sizeof(INPUT));
                         Moved += rem;
 #ifdef __MacroDebug
@@ -99,7 +99,7 @@ void MouseFlick(const int Angle, const bool NoReturn) {
         Wait(Delay);
         DoPhase(true);
     } else {
-        const LONG Pixels = Angle * ROBLOX_SENS_MULT * FlickSensitivity->load();
+        const long Pixels = static_cast<long>(static_cast<float>(Angle) * ROBLOX_SENS_MULT * FlickSensitivity->load());
 
         MouseInput->dx = Pixels;
         SendInput(1, &Input, sizeof(INPUT));

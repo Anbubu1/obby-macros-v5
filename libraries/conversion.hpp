@@ -28,8 +28,8 @@ inline HRESULT ConvertWICBitmapSourceToHBITMAP(IWICBitmapSource* pSource, HBITMA
 
     BITMAPINFO BitmapInfo = {};
     BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
-    BitmapInfo.bmiHeader.biWidth = (LONG)Width;
-    BitmapInfo.bmiHeader.biHeight = -(LONG)Height;
+    BitmapInfo.bmiHeader.biWidth = static_cast<LONG>(Width);
+    BitmapInfo.bmiHeader.biHeight = -static_cast<LONG>(Height);
     BitmapInfo.bmiHeader.biPlanes = 1;
     BitmapInfo.bmiHeader.biBitCount = 32;
     BitmapInfo.bmiHeader.biCompression = BI_RGB;
@@ -86,7 +86,7 @@ inline HICON LoadWebpAsIcon(const wchar_t* file) {
 
     pGdiBitmap = Gdiplus::Bitmap::FromHBITMAP(hBitmap, nullptr);
     if (pGdiBitmap) {
-        Gdiplus::Status st = pGdiBitmap->GetHICON(&hIcon);
+        pGdiBitmap->GetHICON(&hIcon);
         delete pGdiBitmap;
         pGdiBitmap = nullptr;
     }

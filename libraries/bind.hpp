@@ -2,9 +2,7 @@
 
 #include <unordered_map>
 #include <functional>
-#include <chrono>
 #include <string>
-#include <thread>
 
 #include <general.hpp>
 #include <signals.hpp>
@@ -14,13 +12,14 @@
 #include <globals.hpp>
 #include <windows.h>
 
-namespace Binds {
-    inline UINT* Binding = nullptr;
-    inline UINT* OpenedMultiSliderWindow = nullptr;
-    inline Signal<UINT> KeyPressed;
-    inline Signal<UINT> KeyReleased;
+#include <types.hpp>
 
-    inline UINT NextId = 1;
+struct Binds {
+    inline static uint* Binding = nullptr;
+    inline static uint* OpenedMultiSliderWindow = nullptr;
+    inline static Signal<uint> KeyPressed;
+    inline static Signal<uint> KeyReleased;
+    inline static uint NextId = 1;
 };
 
 enum class BindMode {
@@ -37,16 +36,42 @@ enum class BindType {
     Multi
 };
 
-constexpr UINT UNUSABLE_VK = 0x0FFF;
+constexpr uint UNUSABLE_VK = 0x0FFF;
 
 class BlankImGuiBind;
 
-extern const char* DisplayMap[256];
-extern std::unordered_map<UINT, BlankImGuiBind*> IdToBind;
+extern inline constexpr auto DisplayMap = []{
+    std::array<const char*, 256> Map{};
+    Map['0'] = "ZERO";
+    Map['1'] = "ONE";
+    Map['2'] = "TWO";
+    Map['3'] = "THREE";
+    Map['4'] = "FOUR";
+    Map['5'] = "FIVE";
+    Map['6'] = "SIX";
+    Map['7'] = "SEVEN";
+    Map['8'] = "EIGHT";
+    Map['9'] = "NINE";
+    Map['`'] = "GRAVE";
+    Map['/'] = "SLASH";
+    Map['\\'] = "BSLASH";
+    Map['-'] = "MINUS";
+    Map['='] = "EQUAL";
+    Map['\''] = "QUOTE";
+    Map[';'] = "SCOLON";
+    Map[','] = "COMMA";
+    Map['.'] = "PERIOD";
+    Map['['] = "LSQBRKT";
+    Map[']'] = "RSQBRKT";
+    return Map;
+}();
+
+extern std::unordered_map<uint, BlankImGuiBind*> IdToBind;
 
 bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy = false);
-void SetBindKey(BlankImGuiBind* const Bind, const UINT VK);
+void SetBindKey(BlankImGuiBind* const Bind, const uint VK);
 bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy = false);
+bool UpdateKey(BlankImGuiBind* const Bind, const uint VK);
 
 class BlankImGuiBind {
 public:
@@ -54,141 +79,50 @@ public:
     BindType Type = BindType::None;
     std::string Display = "NONE";
     std::string Key = "NONE";
-    UINT VK = UNUSABLE_VK;
-    UINT Id = 1;
+    uint VK = UNUSABLE_VK;
+    uint Id = 1;
 
-    BlankImGuiBind(
-        const UINT VK = UNUSABLE_VK,
+    explicit BlankImGuiBind(
+        const uint VK = UNUSABLE_VK,
         const BindMode Mode = BindMode::Toggle
-    ) : Id(Binds::NextId),
-        Mode(Mode) {
-        Binds::NextId += 1;
-        IdToBind[Binds::NextId] = this;
+    );
 
-        if (VK != UNUSABLE_VK) {
-            SetBindKey(this, VK);
-        }
-    }
-
-    virtual void Update() {
-        UpdateBind(this);
-    }
-    
+    virtual void Update();
     virtual ~BlankImGuiBind() noexcept = default;
 };
 
-inline bool UpdateKey(BlankImGuiBind* const Bind, const UINT VK) {
-    if (Binds::Binding == &Bind->Id && Globals::ImGuiShown) {
-        SetBindKey(Bind, VK);
-        Binds::Binding = nullptr;
-        return true;
-    }
-    
-    return false;
-}
-
-class ImGuiBind : BlankImGuiBind {
+class ImGuiBind : public BlankImGuiBind {
 public:
-    Connection<UINT> OnPressConnection;
+    Connection<uint> OnPressConnection;
     bool Flag = false;
 
-    ImGuiBind(const UINT VK = UNUSABLE_VK, const BindMode Mode = BindMode::Toggle)
-    : BlankImGuiBind(VK, Mode) {
-        Type = BindType::Normal;
-        OnPressConnection = Binds::KeyPressed.connect([this](UINT VK_Key) {
-            if (UpdateKey(this, VK_Key)) return;
-            if (this->Mode == BindMode::Toggle && VK_Key == this->VK) {
-                this->Flag = !this->Flag;
-            }
-        });
-    }
+    ImGuiBind(const uint VK = UNUSABLE_VK, const BindMode Mode = BindMode::Toggle);
 
-    void Update() override {
-        UpdateBind(this);
+    void Update() override;
 
-        switch (this->Mode) {
-            case BindMode::Hold: {
-                this->Flag = GetAsyncKeyState(this->VK);
-                return;
-            }
-
-            case BindMode::None: {
-                this->Flag = false;
-                return;
-            }
-
-            case BindMode::Always: {
-                this->Flag = true;
-                return;
-            }
-
-            case BindMode::Toggle: {
-                return;
-            }
-        }
-    }
-
-    ~ImGuiBind() noexcept override {
-        OnPressConnection.disconnect();
-    }
+    ~ImGuiBind() noexcept override;
 };
 
 class CallbackImGuiBind : public BlankImGuiBind {
 private:
-    Connection<UINT> OnPressConnection;
+    Connection<uint> OnPressConnection;
     bool Holding;
 
 public:
     std::function<void()> Callback;
 
     CallbackImGuiBind(
-        const std::function<void()> cb,
+        const std::function<void()> Callback,
         const BindMode BindMode = BindMode::None,
-        const UINT VK = UNUSABLE_VK
-    ) : BlankImGuiBind(VK, BindMode),
-        Callback(cb) {
-        Type = BindType::Callback;
-        OnPressConnection = Binds::KeyPressed.connect([this](const UINT VK_Key) {
-            if (UpdateKey(this, VK_Key)) return;
-            if (VK_Key != this->VK) return;
-            if (this->Mode == BindMode::Hold) {
-                this->Holding = true;
-                auto HoldingConnection = std::make_shared<Connection<UINT>>(Connection<UINT>{});
+        const uint VK = UNUSABLE_VK
+    );
 
-                *HoldingConnection = Binds::KeyReleased.connect([this, HoldingConnection](const UINT VK_Key) {
-                    if (this->VK != VK_Key) return;
-                    HoldingConnection->disconnect();
-                    this->Holding = false;
-                });
-
-                while (this->Holding) {
-                    using namespace std::chrono;
-
-                    const auto Start = high_resolution_clock::now();
-
-                    this->Callback();
-
-                    const auto Elapsed = high_resolution_clock::now() - Start;
-
-                    if (Elapsed < milliseconds(10)) {
-                        std::this_thread::sleep_for(milliseconds(10)
-                         - duration_cast<milliseconds>(Elapsed));
-                    }
-                }
-            } else {
-                this->Callback();
-            }
-        });
-    }
-
-    ~CallbackImGuiBind() noexcept override {
-        OnPressConnection.disconnect();
-    }
+    ~CallbackImGuiBind() noexcept override;
 };
 
 class SliderCallbackImGuiBind : public BlankImGuiBind {
 private:
-    Connection<UINT> OnPressConnection;
+    Connection<uint> OnPressConnection;
     std::string Label, Format, ButtonLabel;
     float SemiFinalWidth;
     bool Holding = false;
@@ -207,47 +141,7 @@ public:
         const int Max = 100,
         const std::string Format = "%d",
         const BindMode BindMode = BindMode::None
-    ) : BlankImGuiBind(UNUSABLE_VK, BindMode),
-        Callback(Callback),
-        Label(Label + "##" + std::to_string(Binds::NextId)),
-        ButtonLabel("-##" + std::to_string(Binds::NextId)),
-        Value(DefaultValue),
-        Min(Min),
-        Max(Max),
-        Format(Format) {
-        Type = BindType::Callback;
-        OnPressConnection = Binds::KeyPressed.connect([this](const UINT VK_Key) {
-            if (UpdateKey(this, VK_Key)) return;
-            if (VK_Key != this->VK) return;
-            if (this->Mode == BindMode::Hold) {
-                this->Holding = true;
-                auto HoldingConnection = std::make_shared<Connection<UINT>>(Connection<UINT>{});
-
-                *HoldingConnection = Binds::KeyReleased.connect([this, HoldingConnection](const UINT VK_Key) {
-                    if (this->VK != VK_Key) return;
-                    HoldingConnection->disconnect();
-                    this->Holding = false;
-                });
-
-                while (this->Holding) {
-                    using namespace std::chrono;
-
-                    const auto Start = high_resolution_clock::now();
-
-                    this->Callback(Value);
-
-                    const auto Elapsed = high_resolution_clock::now() - Start;
-
-                    if (Elapsed < milliseconds(10)) {
-                        std::this_thread::sleep_for(milliseconds(10)
-                         - duration_cast<milliseconds>(Elapsed));
-                    }
-                }
-            } else {
-                this->Callback(Value);
-            }
-        });
-    }
+    );
 
     void Update() override {
         using namespace std::string_literals;
@@ -293,7 +187,7 @@ public:
     bool WindowToggle = false;
     const int DefaultValue, Min, Max;
     const std::string Format;
-
+    
     MultiSliderCallbackImGuiBind(
         const std::function<void(int)> cb,
         const int DefaultValue = 0,

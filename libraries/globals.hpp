@@ -40,7 +40,7 @@ namespace Globals {
     inline std::filesystem::path MainFolderPath = []() {
         wchar_t buffer[MAX_PATH];
         if (GetEnvironmentVariableW(L"LOCALAPPDATA", buffer, MAX_PATH) == 0)
-            throw std::runtime_error("Failed to get \%localappdata\%!");
+            throw std::runtime_error("Failed to get \\%localappdata\\%!");
 
         return std::filesystem::path(buffer) / FOLDER_NAME;
     }();

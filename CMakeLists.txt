@@ -17,6 +17,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/imgui)
 set(LIBRARIES_DIR ${CMAKE_SOURCE_DIR}/libraries)
+set(PREPROCESSOR_DIR ${CMAKE_SOURCE_DIR}/preprocessor)
 
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
@@ -47,6 +48,7 @@ add_executable(ImGuiDX11App ${APP_SOURCES})
 target_include_directories(ImGuiDX11App PRIVATE
     ${IMGUI_DIR}
     ${LIBRARIES_DIR}
+    ${PREPROCESSOR_DIR}
 )
 
 target_link_libraries(ImGuiDX11App

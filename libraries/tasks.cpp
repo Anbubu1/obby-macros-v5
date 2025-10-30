@@ -9,9 +9,8 @@ void DelayedCall(const double seconds, void(*func)()) {
 
         std::this_thread::sleep_for(duration<double>(seconds * 0.9));
 
-        while (high_resolution_clock::now() < target) {
+        while (high_resolution_clock::now() < target)
             std::this_thread::yield();
-        }
 
         func();
     }).detach();

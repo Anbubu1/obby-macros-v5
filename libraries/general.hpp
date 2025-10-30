@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include <types.hpp>
+
 constexpr std::string ToUpper(std::string_view StringView) {
     std::string Result;
     for (char c : StringView)
@@ -14,10 +16,8 @@ constexpr std::string ToUpper(std::string_view StringView) {
     return Result;
 }
 
-inline std::string GetReadableKeyName(const UINT VK) {
-    using namespace std::string_literals;
-
-    UINT ScanCode = MapVirtualKeyEx(VK, MAPVK_VK_TO_VSC, GetKeyboardLayout(0));
+inline std::string GetReadableKeyName(const uint VK) {
+    uint ScanCode = MapVirtualKeyEx(VK, MAPVK_VK_TO_VSC, GetKeyboardLayout(0));
 
     switch (VK) {
         case VK_LEFT: case VK_UP: case VK_RIGHT: case VK_DOWN:
@@ -28,13 +28,13 @@ inline std::string GetReadableKeyName(const UINT VK) {
             break;
     }
 
-    LONG lParam = ScanCode << 16;
+    long lParam = static_cast<long>(ScanCode << 16);
 
     char Name[64];
     if (GetKeyNameTextA(lParam, Name, sizeof(Name)) > 0) { [[likely]]
         return std::string(Name);
     } else {
-        return "Unknown"s;
+        return std::string("Unknown");
     }
 }
 

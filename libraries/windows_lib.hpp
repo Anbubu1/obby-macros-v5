@@ -60,7 +60,7 @@ inline std::vector<std::string> ListJsonFiles(const std::wstring& directory) {
 
             if (Length <= 1) continue;
             
-            std::string filename(Length - 1, 0);
+            std::string filename(static_cast<size_t>(Length - 1), 0);
             WideCharToMultiByte(CP_UTF8, 0, FindData.cFileName, -1, filename.data(), Length, nullptr, nullptr);
             Results.push_back(filename);
         }
