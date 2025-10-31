@@ -65,9 +65,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     RegisterClassEx(&WndClass);
 
     Globals::g_hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, GetModuleHandle(NULL), 0);
-    if (!Globals::g_hHook) { [[unlikely]]
+    if (!Globals::g_hHook) [[unlikely]]
         MessageBox(NULL, _T("Failed to install keyboard hook!"), _T("Error"), MB_ICONERROR);
-    }
 
     const int nWidth = GetSystemMetrics(SM_CXSCREEN);
     const int nHeight = GetSystemMetrics(SM_CYSCREEN);
