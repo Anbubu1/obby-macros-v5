@@ -1,36 +1,6 @@
 #include <bind.hpp>
 
-const char* DisplayMap[256] = { nullptr };
-std::unordered_map<UINT, BlankImGuiBind*> IdToBind = {};
-
-struct DisplayMapInitializer {
-    DisplayMapInitializer() {
-        DisplayMap['0'] = "ZERO";
-        DisplayMap['1'] = "ONE";
-        DisplayMap['2'] = "TWO";
-        DisplayMap['3'] = "THREE";
-        DisplayMap['4'] = "FOUR";
-        DisplayMap['5'] = "FIVE";
-        DisplayMap['6'] = "SIX";
-        DisplayMap['7'] = "SEVEN";
-        DisplayMap['8'] = "EIGHT";
-        DisplayMap['9'] = "NINE";
-
-        DisplayMap['`'] = "GRAVE";
-        DisplayMap['/'] = "SLASH";
-        DisplayMap['\\'] = "BSLASH";
-        DisplayMap['-'] = "MINUS";
-        DisplayMap['='] = "EQUAL";
-        DisplayMap['\''] = "QUOTE";
-        DisplayMap[';'] = "SCOLON";
-        DisplayMap[','] = "COMMA";
-        DisplayMap['.'] = "PERIOD";
-        DisplayMap['['] = "LSQBRKT";
-        DisplayMap[']'] = "RSQBRKT";
-    }
-};
-
-static DisplayMapInitializer _displayMapInit;
+std::unordered_map<uint, BlankImGuiBind*> IdToBind = {};
 
 bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy) {
     if (!NoDummy) {
@@ -40,7 +10,6 @@ bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy) {
 
         const ImGuiStyle Style = ImGui::GetStyle();
         const float LeftTextMargin = Style.FramePadding.x;
-        const float PaddingWidth = Style.WindowPadding.x;
         const float SpacingWidth = Style.ItemSpacing.x;
 
         ImGui::SameLine(); ImGui::Dummy(
@@ -57,7 +26,7 @@ bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy) {
     const bool Clicked = ImGui::Button(Label.c_str());
 
     return Clicked;
-};
+}
 
 bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy) {
     const bool Clicked = SetRightMostButton(Bind, NoDummy);
@@ -84,7 +53,6 @@ bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy) {
 
     if (Clicked) {
         if (Binds::Binding != nullptr) {
-            const UINT BoundId = *Binds::Binding;
             BlankImGuiBind* const BindingBind = IdToBind[*Binds::Binding];
 
             BindingBind->Display = BindingBind->Key;
@@ -98,7 +66,7 @@ bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy) {
     return Clicked;
 }
 
-void SetBindKey(BlankImGuiBind* const Bind, const UINT VK) {
+void SetBindKey(BlankImGuiBind* const Bind, const uint VK) {
     std::string ReadableKeyName = GetReadableKeyName(VK);
 
     const size_t len = strlen(ReadableKeyName.c_str());
@@ -121,4 +89,160 @@ void SetBindKey(BlankImGuiBind* const Bind, const UINT VK) {
     }
 
     Bind->VK = VK;
-};
+}
+
+bool UpdateKey(BlankImGuiBind* const Bind, const uint VK) {
+    if (Binds::Binding == &Bind->Id && Globals::ImGuiShown) {
+        SetBindKey(Bind, VK);
+        Binds::Binding = nullptr;
+        return true;
+    }
+    
+    return false;
+}
+
+
+BlankImGuiBind::BlankImGuiBind(const uint VK, const BindMode Mode)
+  : Mode(Mode), Id(Binds::NextId) {
+    IdToBind[Id] = this;
+    Binds::NextId += 1;
+    if (VK != UNUSABLE_VK)
+        SetBindKey(this, VK);
+}
+
+void BlankImGuiBind::Update() {UpdateBind(this);}
+
+
+ImGuiBind::ImGuiBind(const uint VK, const BindMode Mode)
+  : BlankImGuiBind(VK, Mode) {
+    this->Type = BindType::Normal;
+    OnPressConnection = Binds::KeyPressed.connect([this](uint VK_Key) {
+        if (UpdateKey(this, VK_Key)) return;
+        if (this->Mode == BindMode::Toggle && VK_Key == this->VK)
+            this->Flag = !this->Flag;
+    });
+}
+
+void ImGuiBind::Update() {
+    UpdateBind(this);
+
+    switch (this->Mode) {
+        case BindMode::Hold: {
+            this->Flag = GetAsyncKeyState(static_cast<bool>(this->VK));
+            return;
+        }
+
+        case BindMode::None: {
+            this->Flag = false;
+            return;
+        }
+
+        case BindMode::Always: {
+            this->Flag = true;
+            return;
+        }
+
+        case BindMode::Toggle: {
+            return;
+        }
+    }
+}
+
+ImGuiBind::~ImGuiBind() noexcept {
+    this->OnPressConnection.disconnect();
+}
+
+CallbackImGuiBind::CallbackImGuiBind(
+    const std::function<void()> Callback,
+    const BindMode BindMode,
+    const uint VK
+) : BlankImGuiBind(VK, BindMode), Callback(Callback) {
+    Type = BindType::Callback;
+    OnPressConnection = Binds::KeyPressed.connect([this](const uint VK_Key) {
+        if (UpdateKey(this, VK_Key)) return;
+        if (VK_Key != this->VK) return;
+        if (this->Mode != BindMode::Hold) {
+            this->Callback();
+            return;
+        }
+
+        this->Holding = true;
+        auto HoldingConnection = std::make_shared<Connection<uint>>(Connection<uint>{});
+        *HoldingConnection = Binds::KeyReleased.connect([this, HoldingConnection](const uint VK_Key) {
+            if (this->VK != VK_Key) return;
+            HoldingConnection->disconnect();
+            this->Holding = false;
+        });
+
+        std::jthread([this](std::stop_token stoken) {
+            using namespace std::chrono;
+
+            while (!stoken.stop_requested() && this->Holding) {
+                const auto Start = high_resolution_clock::now();
+
+                this->Callback();
+
+                const auto Elapsed = high_resolution_clock::now() - Start;
+                if (Elapsed < milliseconds(10)) {
+                    std::this_thread::sleep_for(
+                        milliseconds(10) - duration_cast<milliseconds>(Elapsed)
+                    );
+                }
+            }
+        }).detach();
+    });
+}
+
+CallbackImGuiBind::~CallbackImGuiBind() noexcept {
+    this->OnPressConnection.disconnect();
+}
+
+
+SliderCallbackImGuiBind::SliderCallbackImGuiBind(
+    const std::function<void(int)> Callback,
+    const std::string Label,
+    const int DefaultValue,
+    const int Min,
+    const int Max,
+    const std::string Format,
+    const BindMode BindMode
+)  : BlankImGuiBind(UNUSABLE_VK, BindMode),
+    Label(Label + "##" + std::to_string(Binds::NextId)),
+    Format(Format),
+    ButtonLabel("-##" + std::to_string(Binds::NextId)),
+    Callback(Callback),
+    Value(DefaultValue),
+    Min(Min),
+    Max(Max) {
+    Type = BindType::Callback;
+    OnPressConnection = Binds::KeyPressed.connect([this](const uint VK_Key) {
+        if (UpdateKey(this, VK_Key)) return;
+        if (VK_Key != this->VK) return;
+        if (this->Mode != BindMode::Hold) {
+            this->Callback(Value);
+            return;
+        }
+        this->Holding = true;
+        auto HoldingConnection = std::make_shared<Connection<uint>>(Connection<uint>{});
+
+        *HoldingConnection = Binds::KeyReleased.connect([this, HoldingConnection](const uint VK_Key) {
+            if (this->VK != VK_Key) return;
+            HoldingConnection->disconnect();
+            this->Holding = false;
+        });
+
+        std::jthread([this](std::stop_token stoken) {
+            using namespace std::chrono;
+            while (!stoken.stop_requested() && this->Holding) {
+                const auto Start = high_resolution_clock::now();
+
+                this->Callback(this->Value);
+
+                const auto Elapsed = high_resolution_clock::now() - Start;
+                if (Elapsed < milliseconds(10)) {
+                    std::this_thread::sleep_for(milliseconds(10) - duration_cast<milliseconds>(Elapsed));
+                }
+            }
+        }).detach();
+    });
+}

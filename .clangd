@@ -1,15 +1,25 @@
 CompileFlags:
   CompilationDatabase: build
-  Add:
-    - --target=x86_64-pc-windows-msvc
-    - -std=c++23
+  Add: [
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Wshadow",
+    "-Wconversion",
+    "-Wsign-conversion",
+    "-Wunused-parameter",
+    "-Wunused-variable",
+    "-Wformat=2",
+    "-Wlogical-op",
+    "-Wold-style-cast",
+    "-Wcast-align",
+    "-Wnon-virtual-dtor",
+    "--target=x86_64-pc-windows-msvc",
+    "-std=c++23"
+  ]
 
 Index:
   Background: Skip
-
-Diagnostics:
-  Suppress:
-    - "-Wunused-parameter"
 
 InlayHints:
   Enabled: false

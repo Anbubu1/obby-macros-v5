@@ -15,7 +15,7 @@ WNDCLASSEX InitialiseWindow(HINSTANCE hInstance) {
     wc.hInstance     = hInstance;
     wc.hIcon         = NULL;
     wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
+    wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
     wc.lpszMenuName  = NULL;
     wc.lpszClassName = _T("ImGui Example");
     wc.hIconSm       = NULL;
@@ -50,13 +50,13 @@ typedef BOOL(WINAPI* pSetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTR
 
 void EnableBlur(HWND hwnd) {
     HMODULE hUser = GetModuleHandle("user32.dll");
-    auto SetWindowCompositionAttribute = (pSetWindowCompositionAttribute)GetProcAddress(hUser, "SetWindowCompositionAttribute");
+    auto SetWindowCompositionAttribute = reinterpret_cast<pSetWindowCompositionAttribute>(GetProcAddress(hUser, "SetWindowCompositionAttribute"));
 
     if (SetWindowCompositionAttribute) {
         ACCENT_POLICY policy = {};
         policy.nAccentState = ACCENT_ENABLE_TRANSPARENTGRADIENT;
         policy.nFlags = 2;
-        policy.nColor = 0x99000000;
+        policy.nColor = static_cast<int>(0x99000000);
 
         WINDOWCOMPOSITIONATTRIBDATA data = {};
         data.nAttribute = 19;

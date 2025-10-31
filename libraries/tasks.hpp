@@ -31,10 +31,10 @@ inline void Wait(const double seconds) {
     Wait(std::chrono::duration<double>(seconds));
 }
 
-inline double ShortWait() {
+inline float ShortWait() {
     using namespace std::chrono;
     auto start = high_resolution_clock::now();
     std::this_thread::sleep_for(milliseconds(1));
     auto end = high_resolution_clock::now();
-    return duration<double>(end - start).count();
+    return duration<float>(end - start).count();
 }

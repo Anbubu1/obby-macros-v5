@@ -13,13 +13,13 @@
 
 LRESULT CALLBACK KeyboardProc(const int nCode, const WPARAM wParam, const LPARAM lParam) {
     if (nCode == HC_ACTION) {
-        KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
+        KBDLLHOOKSTRUCT* p = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
 
         if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && p->vkCode != Globals::OPEN_CLOSE_KEY) {
             Binds::KeyPressed.fire(p->vkCode);
         }
 
-        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP && p->vkCode != Globals::OPEN_CLOSE_KEY) {
+        if (wParam == WM_KEYUP || (wParam == WM_SYSKEYUP && p->vkCode != Globals::OPEN_CLOSE_KEY)) {
             Binds::KeyReleased.fire(p->vkCode);
         }
     }
@@ -34,8 +34,8 @@ LRESULT WINAPI WndProc(const HWND hWnd, const UINT msg, const WPARAM wParam, con
 
     switch (msg) {
         case WM_DISPLAYCHANGE: {
-            const int nWidth = LOWORD(lParam);
-            const int nHeight = HIWORD(lParam);
+            const uint nWidth = LOWORD(lParam);
+            const uint nHeight = HIWORD(lParam);
 
             if (Globals::DirectX::g_pd3dDevice != NULL) {
                 CleanupRenderTarget();
@@ -59,7 +59,7 @@ LRESULT WINAPI WndProc(const HWND hWnd, const UINT msg, const WPARAM wParam, con
         case WM_SIZE: {
             if (Globals::DirectX::g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED) {
                 CleanupRenderTarget();
-                Globals::DirectX::g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
+                Globals::DirectX::g_pSwapChain->ResizeBuffers(0, static_cast<uint>LOWORD(lParam), static_cast<uint>HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
                 CreateRenderTarget();
             }
             return 0;

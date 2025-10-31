@@ -40,16 +40,14 @@ inline ImVec2 GetNextWindowSize(
     const int LineWraps = TextElementsInfo[0];
     const int TextElements = TextElementsInfo[1];
 
-    int MinusOne = (VerticalElements - 1) & -(VerticalElements > 0);
-
     return ImVec2(
-        FixedWidth,
+        static_cast<float>(FixedWidth),
         WindowPadding * 2
-      + ItemSpacing * (VerticalElements - 1)
+      + ItemSpacing * static_cast<float>(VerticalElements - 1)
       + TitleBarHeight
-      + FrameHeight * VerticalElements
-      + (TextElements + Separators) * ItemSpacing
-      + LineWraps * TextLineHeight
+      + FrameHeight * static_cast<float>(VerticalElements)
+      + static_cast<float>(TextElements + Separators) * ItemSpacing
+      + static_cast<float>(LineWraps) * TextLineHeight
     );
 }
 
@@ -62,9 +60,9 @@ inline bool ComboFromStringVector(const char* Label, std::string* CurrentItem, c
     if (!CurrentItem || !Items) [[unlikely]] return false;
 
     int CurrentIndex = 0;
-    for (int i = 0; i < (int)Items->size(); ++i) {
+    for (size_t i = 0; i < Items->size(); ++i) {
         if ((*Items)[i] == *CurrentItem) [[likely]] {
-            CurrentIndex = i;
+            CurrentIndex = static_cast<int>(i);
             break;
         }
     }
@@ -72,15 +70,15 @@ inline bool ComboFromStringVector(const char* Label, std::string* CurrentItem, c
     bool Changed = ImGui::Combo(Label, &CurrentIndex, [](void* Data, const int Index, const char** Output) {
         auto& Vector = *static_cast<const std::vector<std::string>*>(Data);
 
-        if (Index < 0 || Index >= (int)Vector.size()) [[unlikely]]
+        if (Index < 0 || Index >= static_cast<int>(Vector.size())) [[unlikely]]
             return false;
 
-        *Output = Vector[Index].c_str();
+        *Output = Vector[static_cast<size_t>(Index)].c_str();
         return true;
-    }, (void*)Items, (int)Items->size());
+    }, const_cast<void*>(static_cast<const void*>(Items)), static_cast<int>(Items->size()));
 
-    if (Changed && CurrentIndex >= 0 && CurrentIndex < (int)Items->size())
-        *CurrentItem = (*Items)[CurrentIndex];
+    if (Changed && CurrentIndex >= 0 && CurrentIndex < static_cast<int>(Items->size()))
+        *CurrentItem = (*Items)[static_cast<size_t>(CurrentIndex)];
 
     return Changed;
 }

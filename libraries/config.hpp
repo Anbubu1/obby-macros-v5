@@ -23,7 +23,7 @@ inline void SaveConfig() {
 
     std::ofstream ConfigFile(Globals::ConfigPath);
     const std::string JsonDump = Globals::JsonConfig.dump();
-    ConfigFile.write(JsonDump.c_str(), JsonDump.length());
+    ConfigFile.write(JsonDump.c_str(), static_cast<long long>(JsonDump.length()));
     ConfigFile.close();
 }
 
