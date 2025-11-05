@@ -29,8 +29,10 @@ set(IMGUI_SOURCES
 )
 
 set(LIBRARIES_SOURCES
-    ${LIBRARIES_DIR}/imgui_lib.cpp
     ${LIBRARIES_DIR}/windows_lib.cpp
+    ${LIBRARIES_DIR}/conversion.cpp
+    ${LIBRARIES_DIR}/imgui_lib.cpp
+    ${LIBRARIES_DIR}/config.cpp
     ${LIBRARIES_DIR}/macros.cpp
     ${LIBRARIES_DIR}/tasks.cpp
     ${LIBRARIES_DIR}/bind.cpp
@@ -65,6 +67,8 @@ target_link_libraries(ImGuiDX11App
     uuid
     comdlg32
     advapi32
+    windowscodecs
+    gdiplus
 )
 
 set_target_properties(ImGuiDX11App PROPERTIES

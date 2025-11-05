@@ -45,18 +45,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         if (!WriteIfJsonNoExist(
             Globals::MainConfigPath,
             Globals::MainJsonConfig.dump(),
-            std::format("Failed to create {}!", Globals::MAIN_CONFIG_NAME)
+            format("Failed to create {}!", Globals::MAIN_CONFIG_NAME)
         ))
-            ReadJson(Globals::MainConfigPath, &Globals::MainJsonConfig);
+            ReadJson(Globals::MainConfigPath, Globals::MainJsonConfig);
 
         Globals::ConfigPath = Globals::ConfigFolderPath / Globals::MainJsonConfig["ConfigUsed"];
 
         if (!WriteIfJsonNoExist(
             Globals::ConfigPath,
             Globals::JsonConfig.dump(),
-            std::format("Failed to create {}!", Globals::CurrentConfigName)
+            format("Failed to create {}!", Globals::CurrentConfigName)
         )) {
-            ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
+            ReadJson(Globals::ConfigPath, Globals::JsonConfig);
             Globals::JsonConfigPaths = ListJsonFiles(Globals::ConfigFolderPath);
         }
     }
@@ -219,7 +219,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 {
                     constexpr const char* ElementName = "Flick Back Macro";
                     static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
-                        static std::atomic<bool>* const Flag = &BooleanFlags[ElementName];
+                        static atomic(bool)* const Flag = &BooleanFlags[ElementName];
                         if (Flag->load()) MouseFlick(Value);
                     }, 90, -360, 360, "%d°"));
                     Checkbox.Update();
@@ -228,7 +228,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 {
                     constexpr const char* ElementName = "Flick Macro";
                     static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
-                        static std::atomic<bool>* const Flag = &BooleanFlags[ElementName];
+                        static atomic(bool)* const Flag = &BooleanFlags[ElementName];
                         if (Flag->load()) MouseFlick(Value, true);
                     }, 90, -360, 360, "%d°"));
                     Checkbox.Update();
@@ -237,7 +237,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 {
                     constexpr const char* ElementName = "Spam Flick Macro";
                     static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
-                        static std::atomic<bool>* const Flag = &BooleanFlags[ElementName];
+                        static atomic(bool)* const Flag = &BooleanFlags[ElementName];
                         if (Flag->load()) MouseFlick(Value);
                         Wait(1.0 / 60.0);
                     }, 90, -360, 360, "%d°", BindMode::Hold));
@@ -365,7 +365,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
         {
             constexpr int WindowWidth = 250;
-            constexpr int NonTextElements = 5;
+            constexpr int NonTextElements = 6;
             constexpr bool NoTitleBarHeight = false;
             const std::array<int, 2> TextElementsInfo = {0, 0};
             constexpr int Separators = 1;
@@ -408,7 +408,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     constexpr const char* ElementName = "Load Config";
                     if (ImGui::Button(ElementName, ButtonHalfRegionWidth)) {
                         Globals::ConfigPath = Globals::ConfigFolderPath / Globals::CurrentConfigName;
-                        ReadJson(Globals::ConfigPath, &Globals::JsonConfig);
+                        ReadJson(Globals::ConfigPath, Globals::JsonConfig);
                         LoadConfig();
                     }
                 }
@@ -465,6 +465,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     }
                 }
 
+                {
+                    constexpr const char* ElementName = "Save Config On Exit";
+                    static Checkbox Checkbox(ElementName, true);
+                    Checkbox.Update();
+                }
+
                 ImGui::End();
             }
         }
@@ -508,7 +514,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #endif
     }
 
-    SaveConfig();
+    if (BooleanFlags["Save Config On Exit"].load())
+        SaveConfig();
 
     if (Globals::g_hHook) [[likely]] UnhookWindowsHookEx(Globals::g_hHook);
 

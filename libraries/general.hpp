@@ -2,17 +2,15 @@
 
 #include <windows.h>
 #include <fstream>
-
-#include <json.hpp>
-
 #include <string>
 
 #include <types.hpp>
+#include <json.hpp>
 
-constexpr std::string ToUpper(std::string_view StringView) {
+constexpr std::string ToUpper(const std::string_view StringView) {
     std::string Result;
-    for (char c : StringView)
-        Result.push_back((c >= 'a' && c <= 'z') ? c - 'a' + 'A' : c);
+    for (const char c : StringView)
+        Result.push_back(c - ((static_cast<char>('a' + 'A')) * (c >= 'a' && c <= 'z')));
     return Result;
 }
 
@@ -62,16 +60,16 @@ inline T JsonIndexDefault(nlohmann::json& Json, const std::string& Key, const T&
     }
 }
 
-inline void ReadJson(const std::filesystem::path Path, nlohmann::json* Value) {
+inline void ReadJson(const std::filesystem::path& Path, nlohmann::json& Value) {
     std::ifstream File(Path);
     std::stringstream Buffer;
     Buffer << File.rdbuf();
     std::string Contents = Buffer.str();
     if (!Contents.empty()) [[unlikely]]
-        *Value = nlohmann::json::parse(Contents);
+        Value = nlohmann::json::parse(Contents);
 }
 
-inline bool WriteIfJsonNoExist(const std::filesystem::path Path, const std::string Value, const std::string Error) {
+inline bool WriteIfJsonNoExist(const std::filesystem::path& Path, const std::string& Value, const std::string& Error) {
     if (!std::filesystem::exists(Path)) [[unlikely]] {
         std::ofstream File(Path);
         if (!File) [[unlikely]]

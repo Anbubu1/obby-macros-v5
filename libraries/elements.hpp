@@ -9,9 +9,9 @@
 #include <type_traits>
 #include <concepts>
 
-namespace Elements {
-    inline std::atomic<UINT> NextId = 1;
-}
+struct Elements {
+    static inline std::atomic<UINT> NextId = 1;
+};
 
 template <typename T>
 concept BoolIntFloat = 

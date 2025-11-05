@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include <types.hpp>
+
 namespace Globals {
     constexpr inline float ROBLOX_SENS_MULT = 2.75;
     constexpr inline int OPEN_CLOSE_KEY = VK_INSERT;
@@ -21,7 +23,7 @@ namespace Globals {
     constexpr inline const char* DEFAULT_CONFIG_NAME = "default.json";
     constexpr inline const char* MAIN_CONFIG_NAME = "main_config.json";
 
-    inline float __DebugRobloxSensitivityMultiplier = 1;
+    constexpr inline float __DebugRobloxSensitivityMultiplier = 1;
 
     inline std::string CurrentConfigName = DEFAULT_CONFIG_NAME;
 
@@ -62,9 +64,9 @@ namespace Globals {
     }
 
     inline bool ImGuiShown = true;
-    inline std::unordered_map<std::string, std::atomic<float>> FloatSliderFlags = {};
-    inline std::unordered_map<std::string, std::atomic<int>> IntSliderFlags = {};
-    inline std::unordered_map<std::string, std::atomic<bool>> BooleanFlags = {};
+    inline std::unordered_map<std::string, atomic(float)> FloatSliderFlags = {};
+    inline std::unordered_map<std::string, atomic(int)> IntSliderFlags = {};
+    inline std::unordered_map<std::string, atomic(bool)> BooleanFlags = {};
 
     inline Signal<const std::chrono::duration<float>> RenderStepped;
 
