@@ -200,17 +200,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         constexpr auto WindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
         {
-            constexpr int WindowWidth = 225;
-            constexpr int NonTextElements = 3;
-            constexpr int IgnoreTitleBar = false;
-            constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1});
-
             static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
-                WindowWidth,
-                NonTextElements,
-                IgnoreTitleBar,
-                TextElementsInfo
+                WindowSizeParams {
+                    .WindowWidth = 225,
+                    .NonTextElements = 3,
+                    .IgnoreTitleBar = false,
+                    .TextElementsInfo = ComputeTextLayoutInfo(std::array{1})
+                }
             );
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Input Macros", nullptr, WindowFlags)) {
@@ -253,18 +250,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #endif
 
         {
-            constexpr int WindowWidth = 310;
-            constexpr int NonTextElements = 0;
-            constexpr int IgnoreTitleBar = false;
-            // e.g. a line of text, then another line of text, and another line of text, followed by 2 lines of text
-            constexpr auto TextElementsInfo = GetTextElementsInfo(std::array{1, 1, 1, 2, 1});
-
             static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
-                WindowWidth,
-                NonTextElements,
-                IgnoreTitleBar,
-                TextElementsInfo
+                WindowSizeParams {
+                    .WindowWidth = 310,
+                    .NonTextElements = 0,
+                    .IgnoreTitleBar = false,
+                    .TextElementsInfo = ComputeTextLayoutInfo(std::array{1, 1, 1, 2, 1})
+                }
             );
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Information", nullptr, WindowFlags)) {
@@ -307,13 +300,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #endif
 
         {
-            constexpr int WindowWidth = 250;
-            constexpr int NonTextElements = 4;
-
             static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
-                WindowWidth,
-                NonTextElements
+                WindowSizeParams {
+                    .WindowWidth = 250,
+                    .NonTextElements = 4
+                }
             );
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
@@ -364,19 +356,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 #endif
 
         {
-            constexpr int WindowWidth = 250;
-            constexpr int NonTextElements = 6;
-            constexpr bool NoTitleBarHeight = false;
-            const std::array<int, 2> TextElementsInfo = {0, 0};
-            constexpr int Separators = 1;
-
             static const ImVec2 WindowSize = GetNextWindowSize(
                 Style,
-                WindowWidth,
-                NonTextElements,
-                NoTitleBarHeight,
-                TextElementsInfo,
-                Separators
+                WindowSizeParams {
+                    .WindowWidth = 250,
+                    .NonTextElements = 6,
+                    .IgnoreTitleBar = false,
+                    .TextElementsInfo = {0, 0},
+                    .Separators = 1
+                }
             );
 
             if (SetNextWindowSize(WindowSize) && ImGui::Begin("Configs", nullptr, WindowFlags)) {
@@ -392,7 +380,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
                     
                     ImGui::SetNextItemWidth(ItemWidth);
-                    ComboFromStringVector(ElementName, &Globals::CurrentConfigName, &Globals::JsonConfigPaths);
+                    ComboFromStringVector(ElementName, Globals::CurrentConfigName, Globals::JsonConfigPaths);
 
                     const std::string Tooltip = std::format(
                         "Selected Config: %localappdata%\\{}\\{}\\{}",

@@ -7,6 +7,25 @@
 
 #include <imgui.h>
 
+struct WindowScope {
+    bool Open;
+    WindowScope(
+        const char* const Name,
+        const ImVec2& Size,
+        const ImGuiWindowFlags Flags
+    );
+    ~WindowScope() noexcept;
+    operator bool() const;
+};
+
+struct WindowSizeParams {
+    int WindowWidth = 250;
+    int NonTextElements = 0;
+    bool IgnoreTitleBar = false;
+    std::array<int, 2> TextElementsInfo{0, 0};
+    int Separators = 0;
+};
+
 bool CreateDeviceD3D(HWND hWnd);
 void CreateRenderTarget();
 void CleanupRenderTarget();
@@ -14,71 +33,34 @@ void CleanupDeviceD3D();
 void SetImGuiScale(float scale);
 
 template<size_t N>
-consteval std::array<int, 2> GetTextElementsInfo(const std::array<int, N>& Array) {
+consteval std::array<int, 2> ComputeTextLayoutInfo(const std::array<int, N>& Array) {
     int Sum = 0;
     for (size_t i = 0; i < N; ++i)
         Sum += Array[i];
     return {Sum, static_cast<int>(N)};
 }
 
-inline ImVec2 GetNextWindowSize(
+ImVec2 GetNextWindowSize(
     const ImGuiStyle& Style = ImGui::GetStyle(),
     const int FixedWidth = 250,
     const int VerticalElements = 0,
-    const bool NoTitleBarHeight = false,
+    const bool IgnoreTitleBar = false,
     const std::array<int, 2> TextElementsInfo = {0, 0},
     const int Separators = 0
-) {
-    static const float TextLineHeight = ImGui::GetTextLineHeight();
-    static const float FrameHeight = ImGui::GetFrameHeight();
+);
 
-    static const float WindowPadding = Style.WindowPadding.y;
-    static const float ItemSpacing = Style.ItemSpacing.y;
-
-    const float TitleBarHeight = (ImGui::GetFontSize() + Style.FramePadding.y * 2.0f) * !NoTitleBarHeight;
-
-    const int LineWraps = TextElementsInfo[0];
-    const int TextElements = TextElementsInfo[1];
-
-    return ImVec2(
-        static_cast<float>(FixedWidth),
-        WindowPadding * 2
-      + ItemSpacing * static_cast<float>(VerticalElements - 1)
-      + TitleBarHeight
-      + FrameHeight * static_cast<float>(VerticalElements)
-      + static_cast<float>(TextElements + Separators) * ItemSpacing
-      + static_cast<float>(LineWraps) * TextLineHeight
-    );
-}
+ImVec2 GetNextWindowSize(
+    const ImGuiStyle& Style = ImGui::GetStyle(),
+    const WindowSizeParams Parameters = WindowSizeParams{}
+);
 
 inline bool SetNextWindowSize(const ImVec2 WindowSize) {
     ImGui::SetNextWindowSize(WindowSize);
     return true;
 }
 
-inline bool ComboFromStringVector(const char* Label, std::string* CurrentItem, const std::vector<std::string>* Items) {
-    if (!CurrentItem || !Items) [[unlikely]] return false;
-
-    int CurrentIndex = 0;
-    for (size_t i = 0; i < Items->size(); ++i) {
-        if ((*Items)[i] == *CurrentItem) [[likely]] {
-            CurrentIndex = static_cast<int>(i);
-            break;
-        }
-    }
-
-    bool Changed = ImGui::Combo(Label, &CurrentIndex, [](void* Data, const int Index, const char** Output) {
-        auto& Vector = *static_cast<const std::vector<std::string>*>(Data);
-
-        if (Index < 0 || Index >= static_cast<int>(Vector.size())) [[unlikely]]
-            return false;
-
-        *Output = Vector[static_cast<size_t>(Index)].c_str();
-        return true;
-    }, const_cast<void*>(static_cast<const void*>(Items)), static_cast<int>(Items->size()));
-
-    if (Changed && CurrentIndex >= 0 && CurrentIndex < static_cast<int>(Items->size()))
-        *CurrentItem = (*Items)[static_cast<size_t>(CurrentIndex)];
-
-    return Changed;
-}
+bool ComboFromStringVector(
+    const char* Label,
+    std::string& CurrentItem,
+    const std::vector<std::string>& Items
+);
