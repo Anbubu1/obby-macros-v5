@@ -7,21 +7,9 @@
 
 #include <imgui.h>
 
-struct WindowScope {
-    bool Open;
-    WindowScope(
-        const char* const Name,
-        const ImVec2& Size,
-        const ImGuiWindowFlags Flags
-    );
-    ~WindowScope() noexcept;
-    operator bool() const;
-};
-
 struct WindowSizeParams {
     int WindowWidth = 250;
     int NonTextElements = 0;
-    bool IgnoreTitleBar = false;
     std::array<int, 2> TextElementsInfo{0, 0};
     int Separators = 0;
 };
@@ -51,7 +39,8 @@ ImVec2 GetNextWindowSize(
 
 ImVec2 GetNextWindowSize(
     const ImGuiStyle& Style = ImGui::GetStyle(),
-    const WindowSizeParams Parameters = WindowSizeParams{}
+    const WindowSizeParams Parameters = WindowSizeParams{},
+    const int WindowFlags = 0
 );
 
 inline bool SetNextWindowSize(const ImVec2 WindowSize) {

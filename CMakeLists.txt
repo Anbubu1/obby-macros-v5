@@ -1,15 +1,17 @@
+cmake_minimum_required(VERSION 3.25)
+project(ImGuiDX11App LANGUAGES CXX)
+
 if(NOT CMAKE_CXX_COMPILER)
     set(CMAKE_CXX_COMPILER "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/bin/clang++.exe" CACHE FILEPATH "C++ compiler" FORCE)
 endif()
 
 # set(CMAKE_BUILD_TYPE Debug)
 
-cmake_minimum_required(VERSION 3.25)
-project(ImGuiDX11App LANGUAGES CXX)
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(fmt CONFIG REQUIRED)
 
 project(ImGuiDX11App)
 
@@ -32,6 +34,7 @@ set(LIBRARIES_SOURCES
     ${LIBRARIES_DIR}/windows_lib.cpp
     ${LIBRARIES_DIR}/conversion.cpp
     ${LIBRARIES_DIR}/imgui_lib.cpp
+    ${LIBRARIES_DIR}/elements.cpp
     ${LIBRARIES_DIR}/config.cpp
     ${LIBRARIES_DIR}/macros.cpp
     ${LIBRARIES_DIR}/tasks.cpp
@@ -69,6 +72,7 @@ target_link_libraries(ImGuiDX11App
     advapi32
     windowscodecs
     gdiplus
+    fmt::fmt-header-only
 )
 
 set_target_properties(ImGuiDX11App PROPERTIES

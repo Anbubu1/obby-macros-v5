@@ -38,7 +38,7 @@ enum class BindType {
 
 constexpr uint UNUSABLE_VK = 0x0FFF;
 
-class BlankImGuiBind;
+struct BaseImGuiBind;
 
 extern inline constexpr auto DisplayMap = []{
     std::array<const char*, 256> Map{};
@@ -66,15 +66,14 @@ extern inline constexpr auto DisplayMap = []{
     return Map;
 }();
 
-extern std::unordered_map<uint, BlankImGuiBind*> IdToBind;
+extern std::unordered_map<uint, BaseImGuiBind*> IdToBind;
 
-bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy = false);
-void SetBindKey(BlankImGuiBind* const Bind, const uint VK);
-bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy = false);
-bool UpdateKey(BlankImGuiBind* const Bind, const uint VK);
+bool UpdateBind(BaseImGuiBind* const Bind, const bool NoDummy = false);
+void SetBindKey(BaseImGuiBind* const Bind, const uint VK);
+bool SetRightMostButton(BaseImGuiBind* const Bind, const bool NoDummy = false);
+bool UpdateKey(BaseImGuiBind* const Bind, const uint VK);
 
-class BlankImGuiBind {
-public:
+struct BaseImGuiBind {
     BindMode Mode = BindMode::None;
     BindType Type = BindType::None;
     std::string Display = "NONE";
@@ -82,36 +81,36 @@ public:
     uint VK = UNUSABLE_VK;
     uint Id = 1;
 
-    explicit BlankImGuiBind(
+    explicit BaseImGuiBind(
         const uint VK = UNUSABLE_VK,
         const BindMode Mode = BindMode::Toggle
     );
 
     virtual void Update();
-    virtual ~BlankImGuiBind() noexcept = default;
+    virtual ~BaseImGuiBind() noexcept = default;
 };
 
-class ImGuiBind : public BlankImGuiBind {
-public:
+struct ImGuiBind : BaseImGuiBind {
     Connection<uint> OnPressConnection;
     bool Flag = false;
 
-    ImGuiBind(const uint VK = UNUSABLE_VK, const BindMode Mode = BindMode::Toggle);
+    explicit ImGuiBind(
+        const uint VK = UNUSABLE_VK,
+        const BindMode Mode = BindMode::Toggle
+    );
 
     void Update() override;
 
     ~ImGuiBind() noexcept override;
 };
 
-class CallbackImGuiBind : public BlankImGuiBind {
-private:
+struct CallbackImGuiBind : BaseImGuiBind {
     Connection<uint> OnPressConnection;
     bool Holding;
 
-public:
     std::function<void()> Callback;
 
-    CallbackImGuiBind(
+    explicit CallbackImGuiBind(
         const std::function<void()> Callback,
         const BindMode BindMode = BindMode::None,
         const uint VK = UNUSABLE_VK
@@ -120,20 +119,18 @@ public:
     ~CallbackImGuiBind() noexcept override;
 };
 
-class SliderCallbackImGuiBind : public BlankImGuiBind {
-private:
+struct SliderCallbackImGuiBind : BaseImGuiBind {
     Connection<uint> OnPressConnection;
     std::string Label, Format, ButtonLabel;
     float SemiFinalWidth;
     bool Holding = false;
     bool Cached = false;
 
-public:
     std::function<void(int)> Callback;
     int Value, Min, Max;
     bool Destroying = false;
 
-    SliderCallbackImGuiBind(
+    explicit SliderCallbackImGuiBind(
         const std::function<void(int)> Callback,
         const std::string Label = "",
         const int DefaultValue = 0,
@@ -179,8 +176,7 @@ public:
 };
 
 using namespace Globals::MultiSliderCallbackImGuiBindSettings;
-class MultiSliderCallbackImGuiBind : public BlankImGuiBind {
-public:
+struct MultiSliderCallbackImGuiBind : BaseImGuiBind {
     std::vector<SliderCallbackImGuiBind> CallbackBinds;
     const std::function<void(int)> Callback;
 
@@ -188,14 +184,14 @@ public:
     const int DefaultValue, Min, Max;
     const std::string Format;
     
-    MultiSliderCallbackImGuiBind(
+    explicit MultiSliderCallbackImGuiBind(
         const std::function<void(int)> cb,
         const int DefaultValue = 0,
         const int Min = 0,
         const int Max = 100,
         const std::string Format = "%d",
         const BindMode BindMode = BindMode::None
-    ) : BlankImGuiBind(UNUSABLE_VK, BindMode),
+    ) : BaseImGuiBind(UNUSABLE_VK, BindMode),
         Callback(cb),
         DefaultValue(DefaultValue),
         Min(Min),

@@ -1,8 +1,8 @@
 #include <bind.hpp>
 
-std::unordered_map<uint, BlankImGuiBind*> IdToBind = {};
+std::unordered_map<uint, BaseImGuiBind*> IdToBind = {};
 
-bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy) {
+bool SetRightMostButton(BaseImGuiBind* const Bind, const bool NoDummy) {
     if (!NoDummy) {
         const float RegionWidth = ImGui::GetContentRegionAvail().x;
         const float LastElementWidth = ImGui::GetItemRectSize().x;
@@ -28,7 +28,7 @@ bool SetRightMostButton(BlankImGuiBind* const Bind, const bool NoDummy) {
     return Clicked;
 }
 
-bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy) {
+bool UpdateBind(BaseImGuiBind* const Bind, const bool NoDummy) {
     const bool Clicked = SetRightMostButton(Bind, NoDummy);
 
     switch (Bind->Mode) {
@@ -53,7 +53,7 @@ bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy) {
 
     if (Clicked) {
         if (Binds::Binding != nullptr) {
-            BlankImGuiBind* const BindingBind = IdToBind[*Binds::Binding];
+            BaseImGuiBind* const BindingBind = IdToBind[*Binds::Binding];
 
             BindingBind->Display = BindingBind->Key;
             Binds::Binding = nullptr;
@@ -66,7 +66,7 @@ bool UpdateBind(BlankImGuiBind* const Bind, const bool NoDummy) {
     return Clicked;
 }
 
-void SetBindKey(BlankImGuiBind* const Bind, const uint VK) {
+void SetBindKey(BaseImGuiBind* const Bind, const uint VK) {
     std::string ReadableKeyName = GetReadableKeyName(VK);
 
     const size_t len = strlen(ReadableKeyName.c_str());
@@ -91,7 +91,7 @@ void SetBindKey(BlankImGuiBind* const Bind, const uint VK) {
     Bind->VK = VK;
 }
 
-bool UpdateKey(BlankImGuiBind* const Bind, const uint VK) {
+bool UpdateKey(BaseImGuiBind* const Bind, const uint VK) {
     if (Binds::Binding == &Bind->Id && Globals::ImGuiShown) {
         SetBindKey(Bind, VK);
         Binds::Binding = nullptr;
@@ -102,7 +102,7 @@ bool UpdateKey(BlankImGuiBind* const Bind, const uint VK) {
 }
 
 
-BlankImGuiBind::BlankImGuiBind(const uint VK, const BindMode Mode)
+BaseImGuiBind::BaseImGuiBind(const uint VK, const BindMode Mode)
   : Mode(Mode), Id(Binds::NextId) {
     IdToBind[Id] = this;
     Binds::NextId += 1;
@@ -110,11 +110,11 @@ BlankImGuiBind::BlankImGuiBind(const uint VK, const BindMode Mode)
         SetBindKey(this, VK);
 }
 
-void BlankImGuiBind::Update() {UpdateBind(this);}
+void BaseImGuiBind::Update() {UpdateBind(this);}
 
 
 ImGuiBind::ImGuiBind(const uint VK, const BindMode Mode)
-  : BlankImGuiBind(VK, Mode) {
+  : BaseImGuiBind(VK, Mode) {
     this->Type = BindType::Normal;
     OnPressConnection = Binds::KeyPressed.connect([this](uint VK_Key) {
         if (UpdateKey(this, VK_Key)) return;
@@ -156,7 +156,7 @@ CallbackImGuiBind::CallbackImGuiBind(
     const std::function<void()> Callback,
     const BindMode BindMode,
     const uint VK
-) : BlankImGuiBind(VK, BindMode), Callback(Callback) {
+) : BaseImGuiBind(VK, BindMode), Callback(Callback) {
     Type = BindType::Callback;
     OnPressConnection = Binds::KeyPressed.connect([this](const uint VK_Key) {
         if (UpdateKey(this, VK_Key)) return;
@@ -206,7 +206,7 @@ SliderCallbackImGuiBind::SliderCallbackImGuiBind(
     const int Max,
     const std::string Format,
     const BindMode BindMode
-)  : BlankImGuiBind(UNUSABLE_VK, BindMode),
+)  : BaseImGuiBind(UNUSABLE_VK, BindMode),
     Label(Label + "##" + std::to_string(Binds::NextId)),
     Format(Format),
     ButtonLabel("-##" + std::to_string(Binds::NextId)),

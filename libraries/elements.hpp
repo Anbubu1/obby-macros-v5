@@ -2,120 +2,197 @@
 
 #include <imgui.h>
 
+#include <imgui_lib.hpp>
 #include <general.hpp>
 #include <globals.hpp>
 #include <bind.hpp>
 
-#include <type_traits>
+#include <types.hpp>
+
+#include <functional>
 #include <concepts>
+#include <optional>
+#include <vector>
 
 struct Elements {
-    static inline std::atomic<UINT> NextId = 1;
+    static inline atomic(uint) NextId = 1;
 };
 
-template <typename T>
+template <typename type>
 concept BoolIntFloat = 
-    std::same_as<T, bool> || 
-    std::same_as<T, int>  || 
-    std::same_as<T, float>;
+    std::same_as<type, bool> || 
+    std::same_as<type, int>  || 
+    std::same_as<type, float>;
 
-template <typename T>
+template <typename type>
 concept IntFloat =
-    std::same_as<T, int> ||
-    std::same_as<T, float>;
+    std::same_as<type, int> ||
+    std::same_as<type, float>;
 
-template <BoolIntFloat T>
+template <typename... Args>
+concept PtrStrings = (std::same_as<Args, std::string*> && ...);
+
 struct Element {
-    const std::string Label;
-    std::atomic<T>* Flag;
-    UINT Id;
-
-    Element(const std::string& Label)
-    : Label(Label + "##" + std::to_string(Elements::NextId.load())),
-      Id(Elements::NextId.load()) {
-        UINT NextIdValue = Elements::NextId.load();
-        NextIdValue += 1;
-        Elements::NextId.store(NextIdValue);
-        
-        if constexpr (std::is_same_v<T, bool>) {
-            Flag = &Globals::BooleanFlags[Label];
-        } else if constexpr (std::is_same_v<T, int>) {
-            Flag = &Globals::IntSliderFlags[Label];
-        } else if constexpr (std::is_same_v<T, float>) {
-            Flag = &Globals::FloatSliderFlags[Label];
-        } else {
-            static_assert(sizeof(T) == 0, "Unsupported type");
-        }
-    }
-
+    const uint Id;
+    explicit Element();
     virtual void Update() = 0;
-
     virtual ~Element() noexcept = default;
 };
 
-struct Checkbox : Element<bool> {
-    std::unique_ptr<BlankImGuiBind> Bind;
 
-    Checkbox(
+struct Window {
+    const std::string Label;
+    const int WindowFlags;
+    const ImVec2 WindowSize;
+    std::vector<std::unique_ptr<Element>> Elements;
+    explicit Window(
         const std::string& Label,
-        const bool DefaultValue = false,
-        std::unique_ptr<BlankImGuiBind> Bind = nullptr
-    ) : Element<bool>(Label),
-        Bind(std::move(Bind)) {
-        nlohmann::json& JsonBooleanFlags = Globals::JsonConfig["BooleanFlags"];
-        Globals::BooleanFlags[Label].store(JsonIndexDefault(JsonBooleanFlags, Label, DefaultValue));
-    }
-
-    void Update() override {
-        bool Toggle = Flag->load();
-        if (ImGui::Checkbox(Label.c_str(), &Toggle)) Flag->store(Toggle);
-        if (Bind) Bind->Update();
-    }
+        const int WindowFlags,
+        const WindowSizeParams Parameters,
+        std::vector<std::unique_ptr<Element>> GivenElements
+    );
+    void Update() const;
 };
 
-template <IntFloat T>
-struct Slider : Element<T> {
-    std::unique_ptr<BlankImGuiBind> Bind;
-    const T Min, Max;
-    const std::string Format;
-    const char* LabelCStr;
-    const char* FormatCStr;
 
-    Slider(
-        const std::string& Label,
-        const T DefaultValue = 0,
-        const T Min = 0,
-        const T Max = 100,
-        const std::string Format = "",
-        std::unique_ptr<BlankImGuiBind> Bind = nullptr
-    ) : Element<T>(Label),
-        Min(Min),
-        Max(Max),
-        Format(Format.empty() ? (std::is_same_v<T, int> ? "%d" : "%.2f") : Format),
-        Bind(std::move(Bind)) {
-        LabelCStr = this->Label.c_str();
-        FormatCStr = this->Format.c_str();
-        nlohmann::json& JsonSliderFlags = Globals::JsonConfig[std::is_same_v<T, int> ? "IntSliderFlags" : "FloatSliderFlags"];
-        if constexpr (std::is_same_v<T, int>) 
-            Globals::IntSliderFlags[Label].store(JsonIndexDefault(JsonSliderFlags, Label, DefaultValue));
-        else if constexpr(std::is_same_v<T, float>) 
-            Globals::FloatSliderFlags[Label].store(JsonIndexDefault(JsonSliderFlags, Label, DefaultValue));
-    }
-
-    void Update() override {
-        T Value = this->Flag->load();
-        bool Changed;
-        
-        if constexpr (std::is_same_v<T, int>)
-            Changed = ImGui::SliderInt(LabelCStr, &Value, Min, Max, FormatCStr);
-        else if constexpr (std::is_same_v<T, float>)
-            Changed = ImGui::SliderFloat(LabelCStr, &Value, Min, Max, FormatCStr);
-
-        if (Changed) {
-            Value = std::clamp(Value, Min, Max);
-            this->Flag->store(Value);
-        }
-        
-        if (Bind) Bind->Update();
-    }
+enum class ElementStyle {
+    TextWrapping
 };
+
+struct PushStyle final : Element {
+    const ElementStyle Style;
+    PushStyle(const ElementStyle Style);
+    void Update() override;
+};
+
+struct PopStyle final : Element {
+    const ElementStyle Style;
+    PopStyle(const ElementStyle Style);
+    void Update() override;
+};
+
+
+struct Separator final : Element {
+    void Update() override;
+};
+
+
+struct TooltipHandler {
+    const bool IsLiteral = true;
+    const std::string Format = "";
+    std::vector<std::string*> FormatArguments;
+    
+    template <typename... Args>
+    requires PtrStrings<Args...>
+    TooltipHandler(
+        const std::string& Format,
+        Args&&... Arguments
+    ) : IsLiteral(sizeof...(Args) == 0),
+        Format(Format) {
+        (FormatArguments.push_back(std::forward<Args>(Arguments)), ...);
+    };
+
+    std::string Get() const;
+};
+
+
+struct LabelledElementParams {
+    const std::string& Label;
+    const std::optional<TooltipHandler> Tooltip = std::nullopt;
+};
+
+struct LabelledElement : Element {
+    const std::string Label;
+    const std::optional<TooltipHandler> Tooltip;
+    explicit LabelledElement(const LabelledElementParams Parameters);
+    void SetTooltip() const;
+};
+
+
+struct ButtonParams {
+    const std::string& Label;
+    const std::optional<TooltipHandler> Tooltip = std::nullopt;
+    std::function<void()> Callback;
+};
+
+struct Button final : LabelledElement {
+    std::function<void()> Callback;
+    explicit Button(const ButtonParams Parameters);
+    void Update() override;
+};
+
+
+struct TextParams {
+    const std::string& Label;
+    const std::optional<TooltipHandler> Tooltip = std::nullopt;
+    const std::optional<ImVec4> Color = std::nullopt;
+};
+
+struct Text final : LabelledElement {
+    const std::optional<ImVec4> Color;
+    explicit Text(const TextParams Parameters);
+    void Update() override;
+};
+
+
+template <BoolIntFloat type>
+struct InteractiveFlagElementParams {
+    const std::string& Label;
+    const std::optional<TooltipHandler> Tooltip = std::nullopt;
+    const type DefaultValue;
+};
+
+template <BoolIntFloat type>
+struct InteractiveFlagElement : LabelledElement {
+    atomic(type)* Flag;
+    explicit InteractiveFlagElement(
+        const InteractiveFlagElementParams<type> Parameters
+    );
+};
+
+
+struct CheckboxParams {
+    const std::string& Label;
+    const std::optional<TooltipHandler> Tooltip = std::nullopt;
+    const bool DefaultValue = false;
+    std::optional<std::unique_ptr<BaseImGuiBind>>&& Bind = std::nullopt;
+};
+
+struct Checkbox final : InteractiveFlagElement<bool> {
+    std::optional<std::unique_ptr<BaseImGuiBind>> Bind;
+    explicit Checkbox(const CheckboxParams Parameters);
+    void Update() override;
+};
+
+
+template <IntFloat type>
+struct SliderParams {
+    const std::string& Label;
+    const std::optional<TooltipHandler> Tooltip = std::nullopt;
+    const type DefaultValue = 100;
+    const type Min = 0;
+    const type Max = 0;
+    const std::string Format = "";
+    std::optional<std::unique_ptr<BaseImGuiBind>>&& Bind = std::nullopt;
+};
+
+template <IntFloat type>
+struct Slider final : InteractiveFlagElement<type> {
+    std::optional<std::unique_ptr<BaseImGuiBind>> Bind;
+    const type Min = 0, Max = 0;
+    const std::string Format = "";
+    float ItemWidth = -1;
+    explicit Slider(const SliderParams<type> Parameters);
+    void Update() override;
+};
+
+
+
+
+
+template<typename... Ts>
+inline std::vector<std::unique_ptr<Element>> MakeElementVector(Ts&&... Arguments) {
+    std::vector<std::unique_ptr<Element>> Vector;
+    (Vector.push_back(std::forward<Ts>(Arguments)), ...);
+    return Vector;
+}

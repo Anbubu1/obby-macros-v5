@@ -5,20 +5,6 @@
 
 #include <globals.hpp>
 
-WindowScope::WindowScope(
-    const char* const Name,
-    const ImVec2& Size,
-    const ImGuiWindowFlags Flags
-) : Open(SetNextWindowSize(Size) && ImGui::Begin(Name, nullptr, Flags)) {}
-
-WindowScope::~WindowScope() noexcept {
-    if (this->Open) ImGui::End();
-}
-
-WindowScope::operator bool() const {
-    return this->Open;
-}
-
 bool CreateDeviceD3D(HWND hWnd) {
     namespace DirectX = Globals::DirectX;
 
@@ -135,11 +121,15 @@ ImVec2 GetNextWindowSize(
     );
 }
 
-ImVec2 GetNextWindowSize(const ImGuiStyle& Style, const WindowSizeParams Parameters) {
+ImVec2 GetNextWindowSize(
+    const ImGuiStyle& Style,
+    const WindowSizeParams Parameters,
+    const int WindowFlags
+) {
     return GetNextWindowSize(Style,
         Parameters.WindowWidth,
         Parameters.NonTextElements,
-        Parameters.IgnoreTitleBar,
+        WindowFlags & ImGuiWindowFlags_NoTitleBar,
         Parameters.TextElementsInfo,
         Parameters.Separators
     );

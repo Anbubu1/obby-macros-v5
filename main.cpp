@@ -199,82 +199,110 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
         constexpr auto WindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
-        {
-            static const ImVec2 WindowSize = GetNextWindowSize(
-                Style,
-                WindowSizeParams {
-                    .WindowWidth = 225,
-                    .NonTextElements = 3,
-                    .IgnoreTitleBar = false,
-                    .TextElementsInfo = ComputeTextLayoutInfo(std::array{1})
-                }
-            );
+        static Window InputMacros(
+            "Input Macros",
+            WindowFlags,
+            WindowSizeParams {
+                .WindowWidth = 225,
+                .NonTextElements = 3,
+                .TextElementsInfo = ComputeTextLayoutInfo(std::array{1})
+            },
+            MakeElementVector(
+                std::make_unique<Text>(TextParams {.Label = "Mouse Actions"}),
+                std::make_unique<Checkbox>(
+                    CheckboxParams {
+                        .Label = "Flick Back Macro",
+                        .Tooltip = TooltipHandler("Flicks your mouse and back."),
+                        .Bind = std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
+                            static atomic(bool)* const Flag = &BooleanFlags["Flick Back Macro"];
+                            if (Flag->load()) MouseFlick(Value);
+                        }, 90, -360, 360, "%d°")
+                    }
+                ),
+                std::make_unique<Checkbox>(
+                    CheckboxParams {
+                        .Label = "Flick Macro",
+                        .Tooltip = TooltipHandler("Flicks your mouse without returning."),
+                        .Bind = std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
+                            static atomic(bool)* const Flag = &BooleanFlags["Flick Macro"];
+                            if (Flag->load()) MouseFlick(Value, true);
+                        }, 90, -360, 360, "%d°")
+                    }
+                ),
+                std::make_unique<Checkbox>(
+                    CheckboxParams {
+                        .Label = "Spam Flick Macro",
+                        .Tooltip = TooltipHandler("Spam flicks your mouse."),
+                        .Bind = std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
+                            static atomic(bool)* const Flag = &BooleanFlags["Spam Flick Macro"];
+                            if (Flag->load()) MouseFlick(Value);
+                            Wait(1.0 / 60.0);
+                        }, 90, -360, 360, "%d°", BindMode::Hold)
+                    }
+                )
+            )
+        );
 
-            if (SetNextWindowSize(WindowSize) && ImGui::Begin("Input Macros", nullptr, WindowFlags)) {
-                ImGui::Text("Mouse Actions");
-
-                {
-                    constexpr const char* ElementName = "Flick Back Macro";
-                    static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
-                        static atomic(bool)* const Flag = &BooleanFlags[ElementName];
-                        if (Flag->load()) MouseFlick(Value);
-                    }, 90, -360, 360, "%d°"));
-                    Checkbox.Update();
-                }
-
-                {
-                    constexpr const char* ElementName = "Flick Macro";
-                    static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
-                        static atomic(bool)* const Flag = &BooleanFlags[ElementName];
-                        if (Flag->load()) MouseFlick(Value, true);
-                    }, 90, -360, 360, "%d°"));
-                    Checkbox.Update();
-                }
-
-                {
-                    constexpr const char* ElementName = "Spam Flick Macro";
-                    static Checkbox Checkbox(ElementName, false, std::make_unique<MultiSliderCallbackImGuiBind>([](const int Value) {
-                        static atomic(bool)* const Flag = &BooleanFlags[ElementName];
-                        if (Flag->load()) MouseFlick(Value);
-                        Wait(1.0 / 60.0);
-                    }, 90, -360, 360, "%d°", BindMode::Hold));
-                    Checkbox.Update();
-                }
-
-                ImGui::End();
-            }
-        }
+        InputMacros.Update();
 
 #ifdef __RenderDebug
         const auto t7 = std::chrono::high_resolution_clock::now();
 #endif
 
-        {
-            static const ImVec2 WindowSize = GetNextWindowSize(
-                Style,
-                WindowSizeParams {
-                    .WindowWidth = 310,
-                    .NonTextElements = 0,
-                    .IgnoreTitleBar = false,
-                    .TextElementsInfo = ComputeTextLayoutInfo(std::array{1, 1, 1, 2, 1})
-                }
-            );
+        static Window Information(
+            "Information",
+            WindowFlags,
+            WindowSizeParams {
+                .WindowWidth = 310,
+                .NonTextElements = 0,
+                .TextElementsInfo = ComputeTextLayoutInfo(std::array{1, 1, 1, 2, 1})
+            },
+            MakeElementVector(
+                std::make_unique<PushStyle>(ElementStyle::TextWrapping),
+                std::make_unique<Text>(TextParams {
+                    .Label = "INSERT KEY TO OPEN/CLOSE!",
+                    .Color = ImVec4(1, 0.2f, 0.2f, 1)
+                }),
+                std::make_unique<Text>(TextParams {
+                    .Label = "Thanks to TASability for inspiration!"
+                }),
+                std::make_unique<Text>(TextParams {
+                    .Label = "Created by Anbubu (@anbubu on discord)"
+                }),
+                std::make_unique<Text>(TextParams {
+                    .Label = "Make sure this program is acceptable for use on whatever game you're playing",
+                    .Color = ImVec4(1, 0.3f, 0.3f, 1)
+                }),
+                std::make_unique<Text>(TextParams {
+                    .Label = "The app is in the hidden icon tray."
+                }),
+                std::make_unique<PopStyle>(ElementStyle::TextWrapping)
+            )
+        );
 
-            if (SetNextWindowSize(WindowSize) && ImGui::Begin("Information", nullptr, WindowFlags)) {
-                ImGui::PushTextWrapPos();
-                ImGui::TextColored(ImVec4(1, 0.2f, 0.2f, 1), "INSERT KEY TO OPEN/CLOSE!");
-                ImGui::Text("Thanks to TASability for inspiration!");
-                ImGui::Text("Created by Anbubu (@anbubu on discord)");
-                ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Make sure this program is acceptable for use on whatever game you're playing");
-                ImGui::Text("The app is in the hidden icon tray.");
-                ImGui::PopTextWrapPos();
-                ImGui::End();
-            }
-        }
+        Information.Update();
 
 #ifdef __RenderDebug
         const auto t8 = std::chrono::high_resolution_clock::now();
 #endif
+
+        static Window CloseWindow(
+            "## Close Application Window",
+            WindowFlags,
+            WindowSizeParams {
+                .WindowWidth = 144,
+                .NonTextElements = 1
+            },
+            MakeElementVector(
+                std::make_unique<Button>(ButtonParams {
+                    .Label = "Close Application",
+                    .Tooltip = TooltipHandler("Closes the application."),
+                    .Callback = []() {
+                        PostQuitMessage(0);
+                    }
+                })
+            )
+        );
 
         {
             constexpr int WindowWidth = 144;
@@ -299,57 +327,47 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         const auto t9 = std::chrono::high_resolution_clock::now();
 #endif
 
-        {
-            static const ImVec2 WindowSize = GetNextWindowSize(
-                Style,
-                WindowSizeParams {
-                    .WindowWidth = 250,
-                    .NonTextElements = 4
-                }
-            );
+        static Window GlobalSettings(
+            "Global Settings",
+            WindowFlags,
+            WindowSizeParams {
+                .WindowWidth = 250,
+                .NonTextElements = 4
+            },
+            MakeElementVector(
+                std::make_unique<Checkbox>(CheckboxParams {
+                    .Label = "Human-like Flicking"
+                }),
+                std::make_unique<Slider<float>>(SliderParams {
+                    .Label = "Flick Sensitivity",
+                    .Tooltip = TooltipHandler("Set this slider to your in-game roblox sensitivity."),
+                    .DefaultValue = 1.0f,
+                    .Min = 0.0f,
+                    .Max = 10.0f
+                }),
+                std::make_unique<Slider<int>>(SliderParams {
+                    .Label = "Flick Delay",
+                    .Tooltip = TooltipHandler("The delay in between flicking."),
+                    .DefaultValue = 60,
+                    .Min = 1,
+                    .Max = 240,
+                    .Format = "1 / %ds"
+                }),
+                std::make_unique<Slider<int>>(SliderParams {
+                    .Label = "Flick Duration",
+                    .Tooltip = TooltipHandler(
+                        "The duration of the human-like flicks."
+                        "Does nothing if \"Human-like Flicking\" is off."
+                    ),
+                    .DefaultValue = 60,
+                    .Min = 1,
+                    .Max = 240,
+                    .Format = "1 / %ds"
+                })
+            )
+        );
 
-            if (SetNextWindowSize(WindowSize) && ImGui::Begin("Global Settings", nullptr, WindowFlags)) {
-                static const float RegionWidth = ImGui::GetContentRegionAvail().x;
-                static const float RegionWidthNoInner = RegionWidth - Style.ItemInnerSpacing.x;
-                
-                {
-                    static Checkbox Checkbox("Human-like Flicking");
-                    Checkbox.Update();
-                }
-
-                {
-                    constexpr const char* ElementName = "Flick Sensitivity";
-                    static Slider<float> Slider(ElementName, 1.0f, 0.0f, 10.0f, "%.2f");
-
-                    static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
-                    ImGui::SetNextItemWidth(ItemWidth);
-                    Slider.Update();
-                    ImGui::SetItemTooltip("Set this slider to your in-game roblox sensitivity.");
-                }
-
-                {
-                    constexpr const char* ElementName = "Flick Delay";
-                    static Slider<int> Slider(ElementName, 60, 1, 240, "1 / %ds");
-
-                    static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
-                    ImGui::SetNextItemWidth(ItemWidth);
-                    Slider.Update();
-                    ImGui::SetItemTooltip("The delay in between flicking.");
-                }
-
-                {
-                    constexpr const char* ElementName = "Flick Duration";
-                    static Slider<int> Slider(ElementName, 60, 1, 240, "1 / %ds");
-
-                    static const float ItemWidth = RegionWidthNoInner - ImGui::CalcTextSize(ElementName).x;
-                    ImGui::SetNextItemWidth(ItemWidth);
-                    Slider.Update();
-                    ImGui::SetItemTooltip("The duration of the human-like flicks. Does nothing if \"Human-like Flicking\" is off.");
-                }
-
-                ImGui::End();
-            }
-        }
+        GlobalSettings.Update();
 
 #ifdef __RenderDebug
         const auto t10 = std::chrono::high_resolution_clock::now();
@@ -361,7 +379,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 WindowSizeParams {
                     .WindowWidth = 250,
                     .NonTextElements = 6,
-                    .IgnoreTitleBar = false,
                     .TextElementsInfo = {0, 0},
                     .Separators = 1
                 }
@@ -454,8 +471,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 }
 
                 {
-                    constexpr const char* ElementName = "Save Config On Exit";
-                    static Checkbox Checkbox(ElementName, true);
+                    static Checkbox Checkbox(
+                        CheckboxParams {
+                            .Label = "Save Config On Exit",
+                            .DefaultValue = true
+                        }
+                    );
                     Checkbox.Update();
                 }
 
